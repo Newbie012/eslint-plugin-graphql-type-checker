@@ -1,1 +1,1 @@
-# eslint-plugin-graphql-type-checker
+An ESLint plugin that generates & validates TypeScript type annotations for GraphQL queries.
