@@ -14,10 +14,10 @@ export interface ExecutePluginOptions {
     pluginContext?: { [key: string]: any };
 }
 
-export async function executePlugin(
+export function executePlugin(
     options: ExecutePluginOptions,
     plugin: CodegenPlugin,
-): Promise<Types.PluginOutput> {
+): Types.PluginOutput {
     if (!plugin || !plugin.plugin || typeof plugin.plugin !== "function") {
         throw new DetailedError(
             `Invalid Custom Plugin "${options.name}"`,
@@ -43,25 +43,27 @@ export async function executePlugin(
     if (plugin.validate && typeof plugin.validate === "function") {
         try {
             // FIXME: Sync validate signature with plugin signature
-            await plugin.validate(
-                outputSchema,
-                documents,
-                options.config,
-                options.outputFilename,
-                options.allPlugins,
-                pluginContext,
+            assertSync(
+                plugin.validate(
+                    outputSchema,
+                    documents,
+                    options.config,
+                    options.outputFilename,
+                    options.allPlugins,
+                    pluginContext,
+                ),
             );
         } catch (e) {
             throw new DetailedError(
                 `Plugin "${options.name}" validation failed:`,
                 `
-            ${e.message}
-          `,
+              ${e.message}
+            `,
             );
         }
     }
 
-    return Promise.resolve(
+    return assertSync(
         plugin.plugin(
             outputSchema,
             documents,
@@ -74,3 +76,11 @@ export async function executePlugin(
         ),
     );
 }
+
+const assertSync = <T>(x: Types.Promisable<T>) => {
+    if ("then" in x) {
+        throw new Error("Unhandled async plugin result");
+    } else {
+        return x;
+    }
+};

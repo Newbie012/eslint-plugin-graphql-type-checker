@@ -15,7 +15,7 @@ import {
 
 import { mergeSchemas } from "@graphql-tools/merge";
 
-export async function codegen(options: Types.GenerateOptions): Promise<string> {
+export function codegen(options: Types.GenerateOptions): string {
     const documents = options.documents || [];
 
     if (documents.length > 0 && !options.skipDocumentsValidation) {
@@ -82,78 +82,79 @@ export async function codegen(options: Types.GenerateOptions): Promise<string> {
         !Array.isArray(options.config) &&
         options.config.skipDocumentsValidation;
 
+    /*
     if (options.schemaAst && documents.length > 0 && !skipDocumentValidation) {
         const extraFragments: { importFrom: string; node: DefinitionNode }[] =
             options.config && (options.config as any).externalFragments
                 ? (options.config as any).externalFragments
                 : [];
+        const errors = [];
         const errors = await validateGraphQlDocuments(options.schemaAst, [
-            ...documents,
-            ...extraFragments.map((f) => ({
-                location: f.importFrom,
-                document: { kind: Kind.DOCUMENT, definitions: [f.node] },
-            })),
+          ...documents,
+          ...extraFragments.map(f => ({
+            location: f.importFrom,
+            document: { kind: Kind.DOCUMENT, definitions: [f.node] },
+          })),
         ]);
         checkValidationErrors(errors);
     }
+    */
 
     const prepend: Set<string> = new Set<string>();
     const append: Set<string> = new Set<string>();
 
-    const output = await Promise.all(
-        options.plugins.map(async (plugin) => {
-            const name = Object.keys(plugin)[0];
-            const pluginPackage = options.pluginMap[name];
-            const pluginConfig = plugin[name] || {};
+    const output = options.plugins.map((plugin) => {
+        const name = Object.keys(plugin)[0];
+        const pluginPackage = options.pluginMap[name];
+        const pluginConfig = plugin[name] || {};
 
-            const execConfig =
-                typeof pluginConfig !== "object"
-                    ? pluginConfig
-                    : {
-                          ...options.config,
-                          ...pluginConfig,
-                      };
+        const execConfig =
+            typeof pluginConfig !== "object"
+                ? pluginConfig
+                : {
+                      ...options.config,
+                      ...pluginConfig,
+                  };
 
-            const result = await executePlugin(
-                {
-                    name,
-                    config: execConfig,
-                    parentConfig: options.config,
-                    schema: options.schema,
-                    schemaAst,
-                    documents: options.documents,
-                    outputFilename: options.filename,
-                    allPlugins: options.plugins,
-                    skipDocumentsValidation: options.skipDocumentsValidation,
-                    pluginContext: options.pluginContext,
-                },
-                pluginPackage,
-            );
+        const result = executePlugin(
+            {
+                name,
+                config: execConfig,
+                parentConfig: options.config,
+                schema: options.schema,
+                schemaAst,
+                documents: options.documents,
+                outputFilename: options.filename,
+                allPlugins: options.plugins,
+                skipDocumentsValidation: options.skipDocumentsValidation,
+                pluginContext: options.pluginContext,
+            },
+            pluginPackage,
+        );
 
-            if (typeof result === "string") {
-                return result || "";
-            } else if (isComplexPluginOutput(result)) {
-                if (result.append && result.append.length > 0) {
-                    for (const item of result.append) {
-                        if (item) {
-                            append.add(item);
-                        }
+        if (typeof result === "string") {
+            return result || "";
+        } else if (isComplexPluginOutput(result)) {
+            if (result.append && result.append.length > 0) {
+                for (const item of result.append) {
+                    if (item) {
+                        append.add(item);
                     }
                 }
-
-                if (result.prepend && result.prepend.length > 0) {
-                    for (const item of result.prepend) {
-                        if (item) {
-                            prepend.add(item);
-                        }
-                    }
-                }
-                return result.content || "";
             }
 
-            return "";
-        }),
-    );
+            if (result.prepend && result.prepend.length > 0) {
+                for (const item of result.prepend) {
+                    if (item) {
+                        prepend.add(item);
+                    }
+                }
+            }
+            return result.content || "";
+        }
+
+        return "";
+    });
 
     return [
         ...sortPrependValues(Array.from(prepend.values())),
@@ -228,7 +229,7 @@ function validateDuplicateDocuments(files: Types.DocumentFile[]) {
             const definitionKindMap = definitionMap[node.kind];
 
             const length = definitionKindMap[node.name.value].contents.size;
-            definitionKindMap[node.name.value].paths.add(file.location);
+            definitionKindMap[node.name.value].paths.add(file.location!);
             definitionKindMap[node.name.value].contents.add(print(node));
             if (length === definitionKindMap[node.name.value].contents.size) {
                 return null;
@@ -239,7 +240,7 @@ function validateDuplicateDocuments(files: Types.DocumentFile[]) {
 
     files.forEach((file) => {
         const deduplicatedDefinitions = new Set<DefinitionNode>();
-        visit(file.document, {
+        visit(file.document!, {
             OperationDefinition(node) {
                 addDefinition(file, node, deduplicatedDefinitions);
             },
