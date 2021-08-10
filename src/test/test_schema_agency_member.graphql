@@ -1,0 +1,28 @@
+type Query {
+  agencyMembers(
+    nameSearch: String
+    id: AgencyMemberId_Filter
+  ): [AgencyMember!]!
+}
+
+type AgencyMember {
+  id: AgencyMemberId!
+  firstName: String!
+  agency: Agency!
+}
+
+scalar AgencyMemberId
+
+type Agency {
+  id: AgencyId!
+  active: Boolean!
+  name: String!
+  website: String!
+}
+
+scalar AgencyId
+
+input AgencyMemberId_Filter {
+  eq: AgencyMemberId
+  in: [AgencyMemberId!]
+}
