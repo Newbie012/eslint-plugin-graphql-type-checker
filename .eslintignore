@@ -1,0 +1,7 @@
+/dist/
+
+# Only run eslint on src/test, and not on anything else in /src/, as we're not
+# using eslint for linting the plugin sources yet.
+!/src/
+/src/*
+!/src/test/
