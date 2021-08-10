@@ -20,7 +20,8 @@
     "build": "tsc -p ./tsconfig.json",
     "build-watch": "npm run build -- --watch",
     "clean": "rm -rf dist",
-    "lint-watch-dummy": "nodemon --watch dist --watch src/test/DummyModule.ts --exec 'npx eslint src/test/DummyModule.ts'",
+    "lint-test-queries": "eslint --ext .ts src/test/queries",
+    "lint-watch-test-queries": "nodemon --watch dist --watch src/test/queries --exec 'npm run lint-test-queries'",
     "prepublishOnly": "npm run clean && npm run build && npm test",
     "test": "jest"
   },
