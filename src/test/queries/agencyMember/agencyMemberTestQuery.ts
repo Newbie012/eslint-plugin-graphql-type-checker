@@ -1,14 +1,11 @@
 import * as graphql from "graphql";
 import gql from "graphql-tag";
 
-type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
+type AgencyMemberId = string;
 
-type Scalars = {
-    ID: string;
-    String: string;
-    Boolean: boolean;
-    Int: number;
-    Float: number;
+type AgencyMemberId_Filter = {
+    eq?: AgencyMemberId;
+    in: [AgencyMemberId];
 };
 
 type AgencyMember = {
@@ -30,21 +27,19 @@ const conn = undefined;
 
 export const test = async () =>
     AgencyMemberGraphQL.query<
-        Exact<{
-            name: Scalars["String"];
-        }>,
-        { __typename?: "Query" } & {
-            agencyMembers: Array<
-                { __typename?: "AgencyMember" } & Pick<AgencyMember, "id" | "firstName"> & {
-                        agency: { __typename?: "Agency" } & Pick<Agency, "website">;
-                    }
-            >;
+        { memberName: string | null; id: AgencyMemberId_Filter },
+        {
+            agencyMembers: Array<{
+                id: AgencyMemberId;
+                firstName: string;
+                agency: { website: string };
+            }> | null;
         }
     >(
         conn,
         gql`
-            query ($name: String!) {
-                agencyMembers(nameSearch: $name) {
+            query ($memberName: String!, $id: AgencyMemberId_Filter) {
+                agencyMembers(nameSearch: $memberName, id: $id) {
                     id
                     firstName
                     agency {
@@ -54,6 +49,7 @@ export const test = async () =>
             }
         `,
         {
-            name: "Bob Ross",
+            memberName: "Bob Ross",
+            id: { in: ["42"] },
         },
     );

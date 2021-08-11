@@ -144,7 +144,10 @@ const checkQueryTypes_Rule = (
                     data: { errorMessage: result.error.message },
                 });
             } else {
-                const inferredTypeAnnotationStr = result.value;
+                const { argumentsType, resultType } = result.value;
+                const inferredTypeAnnotationStr = `<${argumentsType}, ${resultType}>`;
+                console.log("INFERRED ANNOTATION", inferredTypeAnnotationStr);
+
                 const currentTypeAnnotationStr = typeAnnotation
                     ? context
                           .getSourceCode()

@@ -6,15 +6,14 @@ import * as graphql from "graphql";
 import * as graphqlLanguage from "graphql/language";
 import * as tempy from "tempy";
 
+import * as codeGenerator from "./codeGenerator";
 import { codegen } from "./graphql-codegen-core-sync";
 import * as eslintUtils from "./eslintUtils";
 import * as utils from "./utils";
 
-const getSchema = (schemaFilePath: string): graphql.DocumentNode => {
+const getSchema = (schemaFilePath: string): graphql.GraphQLSchema => {
     const schemaStr = fs.readFileSync(schemaFilePath, "utf8");
-    const schema: graphql.DocumentNode = graphql.parse(
-        graphql.printSchema(graphql.buildSchema(schemaStr)),
-    );
+    const schema: graphql.GraphQLSchema = graphql.buildSchema(schemaStr);
     return schema;
 };
 
@@ -56,16 +55,18 @@ const QUERY_NAME_PLACEHOLDER = "QueryNamePlaceholder_";
 export const inferQueryTypeAnnotationString = (
     schemaFilePath: string,
     document: graphql.DocumentNode,
-): utils.ValueOrError<string, any> => {
+): utils.ValueOrError<{ argumentsType: string; resultType: string }, any> => {
+    const schema = getSchema(schemaFilePath);
+    const { argumentsType, resultType } = codeGenerator.generateTypes(schema, document);
+
     const namedOperationDocument = replaceQueryName(document, QUERY_NAME_PLACEHOLDER);
-    // console.log("Named", namedDefsAst);
 
     // from https://www.graphql-code-generator.com/docs/getting-started/programmatic-usage
     const config = {
         documents: [{ document: namedOperationDocument }],
         config: {},
         filename: tempy.file({ name: "graphQLOutput.ts" }), // Not used by plugin, but required in config.
-        schema: getSchema(schemaFilePath),
+        schema: graphql.parse(graphql.printSchema(schema)),
         plugins: [
             {
                 // See https://github.com/dotansimha/graphql-code-generator/blob/master/packages/plugins/typescript/operations/src/config.ts
@@ -89,6 +90,6 @@ export const inferQueryTypeAnnotationString = (
             inferredTypeDefinitionsStr,
             QUERY_NAME_PLACEHOLDER,
         );
-        return { value: `<${typeStrs.args}, ${typeStrs.result}>` };
+        return { value: { argumentsType, resultType } };
     }
 };
