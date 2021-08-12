@@ -9,11 +9,6 @@ import * as codeGenerator from "./codeGenerator";
 import * as eslintUtils from "./eslintUtils";
 import * as utils from "./utils";
 
-const createRule = ESLintUtils.RuleCreator(
-    (name) =>
-        `https://github.com/MedFlyt/medflyt_server2/blob/packages/eslint-plugin-graphql-type-checker/docs/rules/${name}.md`,
-);
-
 const messages = {
     noInterpolation: "Interpolation not allowed in gql template literals",
     gqlLiteralParseError: "Parse error in GraphQL template literal:\n\n{{errorMessage}}",
@@ -373,9 +368,16 @@ const prettifyAnnotationInPlace = (
     return prettyAnnotationStr;
 };
 
+const createRule = ESLintUtils.RuleCreator(
+    (name) =>
+        `https://github.com/MedFlyt/medflyt_server2/blob/packages/eslint-plugin-graphql-type-checker/docs/rules/${name}.md`,
+);
+
+const checkQueryTypes_RuleName = "check-query-types";
+
 export const rules = {
-    "check-query-types": createRule<RuleOptions, MessageId>({
-        name: "ts-gql",
+    [checkQueryTypes_RuleName]: createRule<RuleOptions, MessageId>({
+        name: checkQueryTypes_RuleName,
         meta: {
             fixable: "code",
             docs: {
