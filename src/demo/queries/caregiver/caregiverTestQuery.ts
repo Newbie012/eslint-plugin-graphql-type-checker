@@ -1,29 +1,10 @@
 import * as graphql from "graphql";
 import gql from "graphql-tag";
 
-type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
-
-type Scalars = {
-    ID: string;
-    String: string;
-    Boolean: boolean;
-    Int: number;
-    Float: number;
-
-    TrainingCenterBundleId: TrainingCenterBundleId;
-};
-
 type TrainingCenterBundleId = string;
 type CaregiverId = string;
 type AgencyId = string;
 type LocalDate = Date;
-
-type VisibleTrainingCenterBundle = {
-    caregiver_id: CaregiverId;
-    agency_id: AgencyId;
-    caregiver_visible_date: LocalDate;
-    agency: Agency;
-};
 
 type Agency = {
     name: string;

@@ -60,7 +60,6 @@ const checkQueryTypes_RuleListener = (context: RuleContext): TSESLint.RuleListen
                 const schemaNames = Object.keys(schemaFilePaths);
 
                 const { callee, arguments: args } = callExpression;
-                // console.log("CallExpression", callExpression);
                 if (
                     callee.type === "MemberExpression" &&
                     callee.property.type === "Identifier" &&
@@ -70,16 +69,12 @@ const checkQueryTypes_RuleListener = (context: RuleContext): TSESLint.RuleListen
                     const connIdentifierName = callee.object.name;
                     if (schemaNames.includes(connIdentifierName)) {
                         const typeAnnotation = callExpression.typeParameters;
-                        // console.log("TYPE ANNOTATION", typeAnnotation);
-                        // console.log("PROPERTY", callee.property.type, callee.property.name);
-                        // console.log("OBJECT", callee.object);
+
                         const taggedGqlTemplate = eslintUtils.getTaggedGqlTemplateArg(args);
-                        // console.log(taggedGqlTemplate);
                         if (taggedGqlTemplate !== null) {
                             const schemaFilePath = schemaFilePaths[connIdentifierName];
 
                             const gqlStr = getQglString(context.report, taggedGqlTemplate);
-                            // console.log("gqlStr", gqlStr);
                             if (gqlStr !== null) {
                                 checkQueryTypes_Rule(
                                     context,
@@ -163,7 +158,6 @@ const checkQueryTypes_Rule = (
                             gqlOperationDocument,
                         );
                         const inferredTypeAnnotationStr = `<${argumentsType}, ${resultType}>`;
-                        // console.log("INFERRED ANNOTATION", inferredTypeAnnotationStr);
 
                         const currentTypeAnnotationStr = typeAnnotation
                             ? context
@@ -199,7 +193,6 @@ const checkQueryTypes_Rule = (
                                           callExpression.callee.range[1],
                                       ],
                                   };
-                            // console.log("annotationRange", annotationRange);
 
                             const typeStr = prettifyAnnotationInPlace(
                                 context,
@@ -301,7 +294,6 @@ const parseSourceCodeProgram = (moduleStr: string): TSESLint.SourceCode.Program 
 const getNormalizedAnnotationStr = (str: string) => {
     const statementStr = `query${str}()`;
     const normalizedStatementStr = prettier.format(statementStr, { parser: "typescript" });
-    // console.log('normalizedStatement', normalizedStatement);
 
     const normalizedStatement = parser.parse(normalizedStatementStr).body[0];
     if (
@@ -349,7 +341,6 @@ const prettifyAnnotationInPlace = (
         annotatedPlaceholderModuleStr,
         prettierConfig ? prettierConfig : { parser: "typescript" },
     );
-    // console.log(`>>>prettyModuleStr:\n${prettyModuleStr}\n<<<`);
 
     const sourceCodeProgram = parseSourceCodeProgram(prettyModuleStr);
     const moduleSource = new TSESLint.SourceCode(prettyModuleStr, sourceCodeProgram);
@@ -378,7 +369,7 @@ const prettifyAnnotationInPlace = (
         prettyAnnotationRange[0],
         prettyAnnotationRange[1],
     );
-    // console.log("nodes", prettyAnnotationStr);
+
     return prettyAnnotationStr;
 };
 

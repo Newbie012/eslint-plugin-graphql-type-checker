@@ -8,15 +8,6 @@ type AgencyMemberId_Filter = {
     in: [AgencyMemberId];
 };
 
-type AgencyMember = {
-    id: string;
-    firstName: string;
-};
-
-type Agency = {
-    website: string;
-};
-
 const AgencyMemberGraphQL = {
     query<Args, Res>(_conn: any, _gqlDoc: graphql.DocumentNode, _args: Args): Res {
         return {} as any;
