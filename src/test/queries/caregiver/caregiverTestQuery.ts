@@ -40,16 +40,14 @@ const conn = undefined;
 
 export const test = async () =>
     CaregiverGraphQL.query<
-        Exact<{
-            bundleId: Scalars["TrainingCenterBundleId"];
-        }>,
-        { __typename?: "Query" } & {
-            visibleTrainingCenterBundles: Array<
-                { __typename?: "VisibleTrainingCenterBundle" } & Pick<
-                    VisibleTrainingCenterBundle,
-                    "caregiver_id" | "agency_id" | "caregiver_visible_date"
-                > & { agency: { __typename?: "Agency" } & Pick<Agency, "name" | "website"> }
-            >;
+        { bundleId: TrainingCenterBundleId },
+        {
+            visibleTrainingCenterBundles: ReadonlyArray<{
+                caregiver_id: CaregiverId;
+                agency_id: AgencyId;
+                caregiver_visible_date: LocalDate;
+                agency: { name: string; website: string };
+            }>;
         }
     >(
         conn,

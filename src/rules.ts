@@ -1,19 +1,13 @@
 import { ESLintUtils, TSESTree, TSESLint } from "@typescript-eslint/experimental-utils";
 import * as parser from "@typescript-eslint/parser";
+import * as fs from "fs";
 import * as graphql from "graphql";
+import * as path from "path";
 import * as prettier from "prettier";
 
+import * as codeGenerator from "./codeGenerator";
 import * as eslintUtils from "./eslintUtils";
-import * as graphqlUtils from "./graphqlUtils";
 import * as utils from "./utils";
-
-/*
-TODO:
-- Cleanup
-- Add docs/rules/check-query-types.md
-- Add README.md
-- Add graphql to peerdeps
-*/
 
 const createRule = ESLintUtils.RuleCreator(
     (name) =>
@@ -21,18 +15,19 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 const messages = {
-    unhandledPluginException:
-        "Unhandled exception in graphql-type-checker plugin, probably due to a bug in the plugin. " +
-        "Note that the query type annotations may be incorrect. Exception:\n{{errorMessage}}",
-    missingQueryType: "Query should have a type annotation that matches the GraphQL query type",
-    invalidQueryType: "Query type annotation does not match GraphQL query type",
-    gqlLiteralParseError: "Parse error in GraphQL template literal:\n{{errorMessage}}",
     noInterpolation: "Interpolation not allowed in gql template literals",
+    gqlLiteralParseError: "Parse error in GraphQL template literal:\n\n{{errorMessage}}",
+    unreadableSchemaFile:
+        "Cannot read GraphQL schema file at '{{schemaFilePath}}':\n\n{{errorMessage}}",
+    invalidGqlSchema: "Invalid GraphQL schema at '{{schemaFilePath}}':\n\n{{errorMessage}}",
+    invalidGqlLiteral: "Invalid GraphQL document in template literal:\n\n{{errorMessage}}",
     noMultipleDefinitions: "Only a single definition is allowed in gql template literals",
     onlyQueryOperations: "Only query operations are allowed in gql template literals",
-    invalidGqlLiteral: "Invalid GraphQL document in template literal:\n{{errorMessage}}",
-    // TODO: graphql-codegen does not provide nice validation exceptions, even with skipDocumentsValidation true, so
-    // maybe we shouldn't include these in the invalidGqlLiteral message.
+    missingQueryType: "Query should have a type annotation that matches the GraphQL query type",
+    invalidQueryType: "Query type annotation does not match GraphQL query type",
+    unhandledPluginException:
+        "Unhandled exception in graphql-type-checker plugin, probably due to a bug in the plugin. " +
+        "Note that the query type annotations may be incorrect.\n\n{{errorMessage}}",
 };
 type MessageId = keyof typeof messages;
 
@@ -119,77 +114,109 @@ const checkQueryTypes_Rule = (
     calleeProperty: TSESTree.Identifier,
     typeAnnotation?: TSESTree.TSTypeParameterInstantiation,
 ) => {
-    const res = utils.catchExceptions(graphql.parse)(gqlStr);
-    if (utils.isError(res)) {
+    const absoluteSchemaFilePath = path.resolve(schemaFilePath);
+    const schemaFileContentsResult = readSchema(absoluteSchemaFilePath);
+    if (utils.isError(schemaFileContentsResult)) {
         context.report({
-            node: callExpression.callee, // Don't report on gql literal because it will obscure gql plugin errors.
-            messageId: "gqlLiteralParseError",
-            data: { errorMessage: res.error.message },
+            node: callExpression.callee, // Don't report on gql literal because it will squiggle over gql plugin errors.
+            messageId: "unreadableSchemaFile",
+            data: {
+                schemaFilePath: absoluteSchemaFilePath,
+                errorMessage: schemaFileContentsResult.error,
+            },
         });
     } else {
-        const gqlAst = res.value;
-        const validationMessageId = validateGraphQLDoc(gqlAst);
-        if (validationMessageId) {
+        const schemaFileContents = schemaFileContentsResult.value;
+        const schemaResult = utils.catchExceptions(graphql.buildSchema)(schemaFileContents);
+
+        if (utils.isError(schemaResult)) {
             context.report({
-                node: taggedGqlTemplate,
-                messageId: validationMessageId,
+                // Don't report on gql literal because it will squiggle over gql plugin errors.
+                node: callExpression.callee,
+                messageId: "invalidGqlSchema",
+                data: { schemaFilePath: absoluteSchemaFilePath, errorMessage: schemaResult.error },
             });
         } else {
-            const result = graphqlUtils.inferQueryTypeAnnotationString(schemaFilePath, gqlAst);
+            const schema = schemaResult.value;
+            {
+                const res = utils.catchExceptions(graphql.parse)(gqlStr);
+                if (utils.isError(res)) {
+                    context.report({
+                        node: callExpression.callee,
+                        messageId: "gqlLiteralParseError",
+                        data: { errorMessage: res.error.message },
+                    });
+                } else {
+                    const gqlOperationDocument = res.value;
 
-            if (utils.isError(result)) {
-                context.report({
-                    node: callExpression.callee,
-                    messageId: "invalidGqlLiteral",
-                    data: { errorMessage: result.error.message },
-                });
-            } else {
-                const inferredTypeAnnotationStr = result.value;
-                const currentTypeAnnotationStr = typeAnnotation
-                    ? context
-                          .getSourceCode()
-                          .text.slice(typeAnnotation.range[0], typeAnnotation.range[1])
-                    : "";
-
-                if (!compareTypeAnnotations(currentTypeAnnotationStr, inferredTypeAnnotationStr)) {
-                    const {
-                        messageId,
-                        node,
-                        inferredAnnotationRange,
-                    }: {
-                        messageId: MessageId;
-                        node: TSESTree.Node;
-                        inferredAnnotationRange: [number, number];
-                    } = typeAnnotation
-                        ? {
-                              messageId: "invalidQueryType",
-                              node: typeAnnotation,
-                              inferredAnnotationRange: typeAnnotation.range,
-                          }
-                        : {
-                              messageId: "missingQueryType",
-                              node: callExpression.callee,
-                              inferredAnnotationRange: [
-                                  callExpression.callee.range[1],
-                                  callExpression.callee.range[1],
-                              ],
-                          };
-                    // console.log("annotationRange", annotationRange);
-
-                    const typeStr = prettifyAnnotationInPlace(
-                        context,
-                        calleeProperty,
-                        inferredAnnotationRange,
-                        inferredTypeAnnotationStr,
+                    const validationReportDescriptor = validateGraphQLDoc(
+                        schema,
+                        callExpression.callee,
+                        taggedGqlTemplate,
+                        gqlOperationDocument,
                     );
-                    const reportDescriptor: TSESLint.ReportDescriptor<MessageId> = {
-                        messageId,
-                        node,
-                        fix(fix) {
-                            return fix.replaceTextRange(inferredAnnotationRange, typeStr);
-                        },
-                    };
-                    context.report(reportDescriptor);
+                    if (validationReportDescriptor) {
+                        context.report(validationReportDescriptor);
+                    } else {
+                        const { argumentsType, resultType } = codeGenerator.generateTypes(
+                            schema,
+                            gqlOperationDocument,
+                        );
+                        const inferredTypeAnnotationStr = `<${argumentsType}, ${resultType}>`;
+                        // console.log("INFERRED ANNOTATION", inferredTypeAnnotationStr);
+
+                        const currentTypeAnnotationStr = typeAnnotation
+                            ? context
+                                  .getSourceCode()
+                                  .text.slice(typeAnnotation.range[0], typeAnnotation.range[1])
+                            : "";
+
+                        if (
+                            !compareTypeAnnotations(
+                                currentTypeAnnotationStr,
+                                inferredTypeAnnotationStr,
+                            )
+                        ) {
+                            const {
+                                messageId,
+                                node,
+                                inferredAnnotationRange,
+                            }: {
+                                messageId: MessageId;
+                                node: TSESTree.Node;
+                                inferredAnnotationRange: [number, number];
+                            } = typeAnnotation
+                                ? {
+                                      messageId: "invalidQueryType",
+                                      node: typeAnnotation,
+                                      inferredAnnotationRange: typeAnnotation.range,
+                                  }
+                                : {
+                                      messageId: "missingQueryType",
+                                      node: callExpression.callee,
+                                      inferredAnnotationRange: [
+                                          callExpression.callee.range[1],
+                                          callExpression.callee.range[1],
+                                      ],
+                                  };
+                            // console.log("annotationRange", annotationRange);
+
+                            const typeStr = prettifyAnnotationInPlace(
+                                context,
+                                calleeProperty,
+                                inferredAnnotationRange,
+                                inferredTypeAnnotationStr,
+                            );
+                            const reportDescriptor: TSESLint.ReportDescriptor<MessageId> = {
+                                messageId,
+                                node,
+                                fix(fix) {
+                                    return fix.replaceTextRange(inferredAnnotationRange, typeStr);
+                                },
+                            };
+                            context.report(reportDescriptor);
+                        }
+                    }
                 }
             }
         }
@@ -208,14 +235,40 @@ function getQglString(report: RuleReporter, expr: TSESTree.TaggedTemplateExpress
     return expr.quasi.quasis[0].value.cooked;
 }
 
-const validateGraphQLDoc = (gqlAst: graphql.DocumentNode): MessageId | null => {
-    if (gqlAst.definitions.length > 1) {
-        return "noMultipleDefinitions";
-    } else {
-        const gqlDefinition = gqlAst.definitions[0];
+const readSchema = (schemaFilePath: string): utils.ValueOrError<string, string> => {
+    try {
+        return { value: fs.readFileSync(schemaFilePath, "utf8") };
+    } catch (error) {
+        return { error };
+    }
+};
 
-        if (gqlDefinition.kind !== "OperationDefinition" || gqlDefinition.operation !== "query") {
-            return "onlyQueryOperations";
+// Validation the GraphQL document against the schema and perform extra checks required for code generation.
+const validateGraphQLDoc = (
+    schema: graphql.GraphQLSchema,
+    generalValidationSquigglyNode: TSESTree.Node,
+    codeGenValidationSquigglyNode: TSESTree.Node,
+    gqlOperationDocument: graphql.DocumentNode,
+): { node: TSESTree.Node; messageId: MessageId; data?: Record<string, string> } | null => {
+    const validationErrors = graphql.validate(schema, gqlOperationDocument);
+    if (validationErrors.length > 0) {
+        return {
+            node: generalValidationSquigglyNode,
+            messageId: "invalidGqlLiteral",
+            data: { errorMessage: validationErrors.map(graphql.printError).join("\n") },
+        };
+    } else {
+        if (gqlOperationDocument.definitions.length > 1) {
+            return { node: codeGenValidationSquigglyNode, messageId: "noMultipleDefinitions" };
+        } else {
+            const gqlDefinition = gqlOperationDocument.definitions[0];
+
+            if (
+                gqlDefinition.kind !== "OperationDefinition" ||
+                gqlDefinition.operation !== "query"
+            ) {
+                return { node: codeGenValidationSquigglyNode, messageId: "onlyQueryOperations" };
+            }
         }
     }
     return null;
