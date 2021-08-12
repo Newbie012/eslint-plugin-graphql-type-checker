@@ -16,6 +16,72 @@ const ruleOptions: RuleOptions = [
 ];
 
 ruleTester.run(
+    "Invalid query-type annotation with AgencyMemberGraphQL schema",
+    rules["check-query-types"],
+    {
+        valid: [],
+        invalid: [
+            {
+                options: ruleOptions,
+                code: `
+await AgencyMemberGraphQL.query<{}, {}>(
+    conn,
+    gql\`
+        query ($memberName: String!, $id: AgencyMemberId_Filter) {
+            agencyMembers(nameSearch: $memberName, id: $id) {
+                id
+                firstName
+                agency {
+                    website
+                }
+            }
+        }
+    \`,
+    args,
+);
+`,
+                output: `
+await AgencyMemberGraphQL.query<
+    { memberName: string; id: AgencyMemberId_Filter | null },
+    {
+        agencyMembers: ReadonlyArray<{
+            id: AgencyMemberId;
+            firstName: string;
+            agency: { website: string };
+        }>;
+    }
+>(
+    conn,
+    gql\`
+        query ($memberName: String!, $id: AgencyMemberId_Filter) {
+            agencyMembers(nameSearch: $memberName, id: $id) {
+                id
+                firstName
+                agency {
+                    website
+                }
+            }
+        }
+    \`,
+    args,
+);
+`,
+                errors: [
+                    {
+                        type: TSESTree.AST_NODE_TYPES.TSTypeParameterInstantiation,
+                        messageId: "invalidQueryType",
+                        line: 2,
+                        column: 32,
+                        endLine: 2,
+                        endColumn: 40,
+                    },
+                ],
+            },
+        ],
+    },
+);
+
+ruleTester.run(
     "Missing query-type annotation with CaregiverGraphQL schema",
     rules["check-query-types"],
     {
@@ -44,7 +110,7 @@ await CaregiverGraphQL.query(
 `,
                 output: `
 await CaregiverGraphQL.query<
-    { bundleId: TrainingCenterBundleId | null },
+    { bundleId: TrainingCenterBundleId },
     {
         visibleTrainingCenterBundles: ReadonlyArray<{
             caregiver_id: CaregiverId;
@@ -86,72 +152,6 @@ await CaregiverGraphQL.query<
     },
 );
 
-ruleTester.run(
-    "Invalid query-type annotation with AgencyMemberGraphQL schema",
-    rules["check-query-types"],
-    {
-        valid: [],
-        invalid: [
-            {
-                options: ruleOptions,
-                code: `
-await AgencyMemberGraphQL.query<{}, {}>(
-    conn,
-    gql\`
-        query ($name: String!) {
-            agencyMembers(nameSearch: $name) {
-                id
-                firstName
-                agency {
-                    website
-                }
-            }
-        }
-    \`,
-    args,
-);
-`,
-                output: `
-await AgencyMemberGraphQL.query<
-    { name: string | null },
-    {
-        agencyMembers: ReadonlyArray<{
-            id: AgencyMemberId;
-            firstName: string;
-            agency: { website: string };
-        }>;
-    }
->(
-    conn,
-    gql\`
-        query ($name: String!) {
-            agencyMembers(nameSearch: $name) {
-                id
-                firstName
-                agency {
-                    website
-                }
-            }
-        }
-    \`,
-    args,
-);
-`,
-                errors: [
-                    {
-                        type: TSESTree.AST_NODE_TYPES.TSTypeParameterInstantiation,
-                        messageId: "invalidQueryType",
-                        line: 2,
-                        column: 32,
-                        endLine: 2,
-                        endColumn: 40,
-                    },
-                ],
-            },
-        ],
-    },
-);
-
 ruleTester.run("Parse error in GraphQL template literal string", rules["check-query-types"], {
     valid: [],
     invalid: [
@@ -182,10 +182,14 @@ ruleTester.run("Validation error in GraphQL template literal string", rules["che
             errors: [
                 {
                     type: TSESTree.AST_NODE_TYPES.MemberExpression,
-                    messageId: "unhandledPluginException",
-                    // data: {
-                    //     errorMessage: ''
-                    // },
+                    messageId: "invalidGqlLiteral",
+                    data: {
+                        errorMessage: `Cannot query field "nonexistent_field" on type "Query".
+
+GraphQL request:1:8
+1 | query {nonexistent_field}
+  |        ^`,
+                    },
 
                     line: 1,
                     column: 1,

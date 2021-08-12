@@ -27,7 +27,7 @@ const conn = undefined;
 
 export const test = async () =>
     AgencyMemberGraphQL.query<
-        { memberName: string | null; id: AgencyMemberId_Filter },
+        { memberName: string; id: AgencyMemberId_Filter | null },
         {
             agencyMembers: ReadonlyArray<{
                 id: AgencyMemberId;

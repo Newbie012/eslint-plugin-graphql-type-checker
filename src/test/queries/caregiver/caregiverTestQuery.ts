@@ -40,7 +40,7 @@ const conn = undefined;
 
 export const test = async () =>
     CaregiverGraphQL.query<
-        { bundleId: TrainingCenterBundleId | null },
+        { bundleId: TrainingCenterBundleId },
         {
             visibleTrainingCenterBundles: ReadonlyArray<{
                 caregiver_id: CaregiverId;

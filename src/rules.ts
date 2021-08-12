@@ -122,7 +122,7 @@ const checkQueryTypes_Rule = (
     const res = utils.catchExceptions(graphql.parse)(gqlStr);
     if (utils.isError(res)) {
         context.report({
-            node: callExpression.callee, // Don't report on gql literal because it will obscure gql plugin errors.
+            node: callExpression.callee, // Don't report on gql literal because it will squiggle over gql plugin errors.
             messageId: "gqlLiteralParseError",
             data: { errorMessage: res.error.message },
         });
@@ -141,12 +141,12 @@ const checkQueryTypes_Rule = (
                 context.report({
                     node: callExpression.callee,
                     messageId: "invalidGqlLiteral",
-                    data: { errorMessage: result.error.message },
+                    data: { errorMessage: result.error.errorMessage },
                 });
             } else {
                 const { argumentsType, resultType } = result.value;
                 const inferredTypeAnnotationStr = `<${argumentsType}, ${resultType}>`;
-                console.log("INFERRED ANNOTATION", inferredTypeAnnotationStr);
+                // console.log("INFERRED ANNOTATION", inferredTypeAnnotationStr);
 
                 const currentTypeAnnotationStr = typeAnnotation
                     ? context
