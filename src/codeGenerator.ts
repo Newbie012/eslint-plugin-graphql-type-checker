@@ -21,6 +21,7 @@ const genArgumentsType_VariableDefinition = (variableDef: graphql.VariableDefini
     return `${variableDef.variable.name.value}: ${variableType}`;
 };
 
+// TODO: Incorrect, convert to graphql.Type and use wrapper below
 const genArgumentsType_Type = (typeNode: graphql.TypeNode): string => {
     switch (typeNode.kind) {
         case "NamedType": {
@@ -41,7 +42,7 @@ const genResultType_OperationDefinition = (
     schema: graphql.GraphQLSchema,
     operationDef: graphql.OperationDefinitionNode,
 ) => {
-    console.log("rootType:", graphql.getOperationRootType(schema, operationDef).name);
+    // console.log("rootType:", graphql.getOperationRootType(schema, operationDef).name);
     const fieldMap = graphql.getOperationRootType(schema, operationDef).getFields();
     // console.log("fieldMap", Object.keys(fieldMap));
     const selectionSet = operationDef.selectionSet;
@@ -51,23 +52,22 @@ const genResultType_OperationDefinition = (
     return `{ ${result} }`; // TODO: name
 };
 
-const extractWrapperTypes = (
-    t: graphql.GraphQLType,
+const wrapListModifier = (tsType: string): string => `ReadonlyArray<${tsType}>`;
+const wrapOrNullModifier = (tsType: string): string => `${tsType} | null`;
+
+const getTypeModifierWrapper = (
+    gqlType: graphql.GraphQLType,
     isNonNull: boolean = false,
-): ((typeName: string) => string) => {
-    //: { namedType: graphql.GraphQLNamedType; wrap: (typeName: string) => string } =>
-    if (graphql.isNonNullType(t)) {
-        const oftype = t.ofType;
-        const wrap = extractWrapperTypes(oftype, true);
-        return wrap;
-    } else if (graphql.isListType(t)) {
-        const oftype = t.ofType;
-        const wrap = extractWrapperTypes(oftype, false);
-        return (t) => `Array<${wrap(t)}>${isNonNull ? " | null" : ""}`;
-    } else {
-        return (t) => `${t}${isNonNull ? "" : " | null"}`;
-    }
-};
+): ((typeName: string) => string) =>
+    graphql.isNonNullType(gqlType)
+        ? getTypeModifierWrapper(gqlType.ofType, true)
+        : (tsType) => {
+              const wrappedType = graphql.isListType(gqlType)
+                  ? wrapListModifier(getTypeModifierWrapper(gqlType.ofType, false)(tsType))
+                  : tsType;
+
+              return isNonNull ? wrappedType : wrapOrNullModifier(wrappedType);
+          };
 
 const genResultType_Selection =
     (schema: graphql.GraphQLSchema, parentFieldMap: graphql.GraphQLFieldMap<any, any>) =>
@@ -76,28 +76,28 @@ const genResultType_Selection =
             case "Field": {
                 const fieldNode: graphql.FieldNode = selection;
                 const field = parentFieldMap[fieldNode.name.value];
-                console.log(
-                    "Field:",
-                    fieldNode.name.value,
-                    Object.keys(parentFieldMap),
-                    graphql.getNamedType(field?.type),
-                );
+                // console.log(
+                //     "Field:",
+                //     fieldNode.name.value,
+                //     Object.keys(parentFieldMap),
+                //     graphql.getNamedType(field?.type),
+                // );
                 const fieldType = field?.type;
                 const namedType: graphql.GraphQLNamedType = graphql.getNamedType(fieldType);
-                const wrap = extractWrapperTypes(fieldType);
-                console.log("namedType", wrap(namedType.name));
-                const fieldMap =
-                    namedType instanceof graphql.GraphQLObjectType ? namedType.getFields() : {};
-                // const fieldType: graphql.GraphQLOutputType = fieldType
-                // const fieldMap2 =fieldType fieldType.getFields()
-                // return 'x'
-                const result = fieldNode.selectionSet
-                    ? `{${fieldNode.selectionSet.selections
-                          .map(genResultType_Selection(schema, fieldMap))
-                          .join(", ")}}`
-                    : convertScalars(graphql.getNamedType(fieldType).name);
-                console.log("children", result);
-                return `${fieldNode.name.value}: ${wrap(result)}`;
+                const typeModifierWrapper = getTypeModifierWrapper(fieldType);
+                let tsBaseType: string;
+
+                if (fieldNode.selectionSet) {
+                    const fieldMap =
+                        namedType instanceof graphql.GraphQLObjectType ? namedType.getFields() : {};
+                    tsBaseType = `{${fieldNode.selectionSet.selections
+                        .map(genResultType_Selection(schema, fieldMap))
+                        .join(", ")}}`;
+                } else {
+                    tsBaseType = convertScalars(graphql.getNamedType(fieldType).name);
+                }
+
+                return `${fieldNode.name.value}: ${typeModifierWrapper(tsBaseType)}`;
             }
             case "FragmentSpread": {
                 throw new Error("generateTypes: Unsupported SelectionNode: FragmentSpreadNode");
@@ -108,6 +108,7 @@ const genResultType_Selection =
         }
     };
 
+// TODO: Validate gql before generateTypes, or plugin throws exceptions.
 export const generateTypes = (
     schema: graphql.GraphQLSchema,
     document: graphql.DocumentNode,
@@ -117,9 +118,9 @@ export const generateTypes = (
         document.definitions[0].kind === "OperationDefinition"
     ) {
         const argumentsType = genArgumentsType_OperationDefinition(document.definitions[0]);
-        console.log(argumentsType);
+        // console.log(argumentsType);
         const resultType = genResultType_OperationDefinition(schema, document.definitions[0]);
-        console.log(resultType);
+        // console.log(resultType);
         return { argumentsType, resultType };
     } else {
         throw new Error("generateTypes: Not a single operation definition");

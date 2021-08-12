@@ -42,12 +42,12 @@ export const test = async () =>
     CaregiverGraphQL.query<
         { bundleId: TrainingCenterBundleId | null },
         {
-            visibleTrainingCenterBundles: Array<{
+            visibleTrainingCenterBundles: ReadonlyArray<{
                 caregiver_id: CaregiverId;
                 agency_id: AgencyId;
                 caregiver_visible_date: LocalDate;
                 agency: { name: string; website: string };
-            }> | null;
+            }>;
         }
     >(
         conn,

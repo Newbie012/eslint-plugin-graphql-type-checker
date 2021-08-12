@@ -44,16 +44,14 @@ await CaregiverGraphQL.query(
 `,
                 output: `
 await CaregiverGraphQL.query<
-    Exact<{
-        bundleId: Scalars[\"TrainingCenterBundleId\"];
-    }>,
-    { __typename?: \"Query\" } & {
-        visibleTrainingCenterBundles: Array<
-            { __typename?: \"VisibleTrainingCenterBundle\" } & Pick<
-                VisibleTrainingCenterBundle,
-                \"caregiver_id\" | \"agency_id\" | \"caregiver_visible_date\"
-            > & { agency: { __typename?: \"Agency\" } & Pick<Agency, \"name\" | \"website\"> }
-        >;
+    { bundleId: TrainingCenterBundleId | null },
+    {
+        visibleTrainingCenterBundles: ReadonlyArray<{
+            caregiver_id: CaregiverId;
+            agency_id: AgencyId;
+            caregiver_visible_date: LocalDate;
+            agency: { name: string; website: string };
+        }>;
     }
 >(
     conn,
@@ -115,15 +113,13 @@ await AgencyMemberGraphQL.query<{}, {}>(
 `,
                 output: `
 await AgencyMemberGraphQL.query<
-    Exact<{
-        name: Scalars[\"String\"];
-    }>,
-    { __typename?: \"Query\" } & {
-        agencyMembers: Array<
-            { __typename?: \"AgencyMember\" } & Pick<AgencyMember, \"id\" | \"firstName\"> & {
-                    agency: { __typename?: \"Agency\" } & Pick<Agency, \"website\">;
-                }
-        >;
+    { name: string | null },
+    {
+        agencyMembers: ReadonlyArray<{
+            id: AgencyMemberId;
+            firstName: string;
+            agency: { website: string };
+        }>;
     }
 >(
     conn,
@@ -186,15 +182,10 @@ ruleTester.run("Validation error in GraphQL template literal string", rules["che
             errors: [
                 {
                     type: TSESTree.AST_NODE_TYPES.MemberExpression,
-                    messageId: "invalidGqlLiteral",
-                    data: {
-                        errorMessage:
-                            "- Unknown field 'nonexistent_field' on type 'Query'.\n" +
-                            "  \n" + // Explicit string to avoid auto-removal of indentation on empty line.
-                            `  GraphQL request:1:8
-  1 | query {nonexistent_field}
-    |        ^`,
-                    },
+                    messageId: "unhandledPluginException",
+                    // data: {
+                    //     errorMessage: ''
+                    // },
 
                     line: 1,
                     column: 1,
