@@ -44,17 +44,15 @@ await CaregiverGraphQL.query(
             output: `
 await CaregiverGraphQL.query<
     Exact<{
-        bundleId: Scalars["TrainingCenterBundleId"];
+        bundleId: Scalars[\"TrainingCenterBundleId\"];
     }>,
-    {
-        __typename?: "Query";
-        visibleTrainingCenterBundles: Array<{
-            __typename?: "VisibleTrainingCenterBundle";
-            caregiver_id: any;
-            agency_id: any;
-            caregiver_visible_date: any;
-            agency: { __typename?: "Agency"; name: string; website: string };
-        }>;
+    { __typename?: \"Query\" } & {
+        visibleTrainingCenterBundles: Array<
+            { __typename?: \"VisibleTrainingCenterBundle\" } & Pick<
+                VisibleTrainingCenterBundle,
+                \"caregiver_id\" | \"agency_id\" | \"caregiver_visible_date\"
+            > & { agency: { __typename?: \"Agency\" } & Pick<Agency, \"name\" | \"website\"> }
+        >;
     }
 >(
     conn,
@@ -109,16 +107,14 @@ await AgencyMemberGraphQL.query<{}, {}>(
             output: `
 await AgencyMemberGraphQL.query<
     Exact<{
-        name: Scalars["String"];
+        name: Scalars[\"String\"];
     }>,
-    {
-        __typename?: "Query";
-        agencyMembers: Array<{
-            __typename?: "AgencyMember";
-            id: any;
-            firstName: string;
-            agency: { __typename?: "Agency"; website: string };
-        }>;
+    { __typename?: \"Query\" } & {
+        agencyMembers: Array<
+            { __typename?: \"AgencyMember\" } & Pick<AgencyMember, \"id\" | \"firstName\"> & {
+                    agency: { __typename?: \"Agency\" } & Pick<Agency, \"website\">;
+                }
+        >;
     }
 >(
     conn,
@@ -173,8 +169,13 @@ await AgencyMemberGraphQL.query<
                 {
                     type: TSESTree.AST_NODE_TYPES.MemberExpression,
                     messageId: "invalidGqlLiteral",
-                    data: { // graphql-codegen validation errors suck.
-                        errorMessage: "Cannot read property 'type' of undefined" },
+                    data: {
+                        errorMessage: "- Unknown field 'nonexistent_field' on type 'Query'.\n" +
+'  \n' + // Explicit string to avoid auto-removal of indentation on empty line.
+`  GraphQL request:1:8
+  1 | query {nonexistent_field}
+    |        ^` },
+
                     line: 1,
                     column: 1,
                     endLine: 1,

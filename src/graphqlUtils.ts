@@ -71,6 +71,8 @@ export const inferQueryTypeAnnotationString = (
                 // See https://github.com/dotansimha/graphql-code-generator/blob/master/packages/plugins/typescript/operations/src/config.ts
                 typescriptOperationsPlugin: {
                     noExport: true,
+                    preResolveTypes: false, // 'true' flattens structure but introduces `any` types
+                    flattenGeneratedTypes: true, // does not appear to do anything
                 },
             },
         ],
