@@ -11,15 +11,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {
-    "graphql": "^15.5.1",
-    "graphql-tag": "^2.12.5"
-  },
   "devDependencies": {
-    "@typescript-eslint/parser": "^4.29.1",
-    "typescript": "^4.3.5",
-    "@medflyt/eslint-plugin-graphql-type-checker": "file:../..",
-    "@typescript-eslint/eslint-plugin": "^4.29.1",
-    "eslint": "^7.32.0"
+    "@medflyt/eslint-plugin-graphql-type-checker": "file:../.."
   }
 }
