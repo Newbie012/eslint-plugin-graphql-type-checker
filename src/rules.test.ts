@@ -15,14 +15,15 @@ const ruleOptions: RuleOptions = [
     },
 ];
 
-ruleTester.run("check-query-types", rules["check-query-types"], {
-    valid: [],
-
-    invalid: [
-        // Test missing query-type annotation with CaregiverGraphQL schema:
-        {
-            options: ruleOptions,
-            code: `
+ruleTester.run(
+    "Missing query-type annotation with CaregiverGraphQL schema",
+    rules["check-query-types"],
+    {
+        valid: [],
+        invalid: [
+            {
+                options: ruleOptions,
+                code: `
 await CaregiverGraphQL.query(
     conn,
     gql\`
@@ -41,7 +42,7 @@ await CaregiverGraphQL.query(
     args,
 );
 `,
-            output: `
+                output: `
 await CaregiverGraphQL.query<
     Exact<{
         bundleId: Scalars[\"TrainingCenterBundleId\"];
@@ -72,22 +73,30 @@ await CaregiverGraphQL.query<
     args,
 );
 `,
-            errors: [
-                {
-                    type: TSESTree.AST_NODE_TYPES.MemberExpression,
-                    messageId: "missingQueryType",
-                    line: 2,
-                    column: 7,
-                    endLine: 2,
-                    endColumn: 29,
-                },
-            ],
-        },
+                errors: [
+                    {
+                        type: TSESTree.AST_NODE_TYPES.MemberExpression,
+                        messageId: "missingQueryType",
+                        line: 2,
+                        column: 7,
+                        endLine: 2,
+                        endColumn: 29,
+                    },
+                ],
+            },
+        ],
+    },
+);
 
-        // Test invalid query-type annotation with AgencyMemberGraphQL schema:
-        {
-            options: ruleOptions,
-            code: `
+ruleTester.run(
+    "Invalid query-type annotation with AgencyMemberGraphQL schema",
+    rules["check-query-types"],
+    {
+        valid: [],
+        invalid: [
+            {
+                options: ruleOptions,
+                code: `
 await AgencyMemberGraphQL.query<{}, {}>(
     conn,
     gql\`
@@ -104,7 +113,7 @@ await AgencyMemberGraphQL.query<{}, {}>(
     args,
 );
 `,
-            output: `
+                output: `
 await AgencyMemberGraphQL.query<
     Exact<{
         name: Scalars[\"String\"];
@@ -132,19 +141,24 @@ await AgencyMemberGraphQL.query<
     args,
 );
 `,
-            errors: [
-                {
-                    type: TSESTree.AST_NODE_TYPES.TSTypeParameterInstantiation,
-                    messageId: "invalidQueryType",
-                    line: 2,
-                    column: 32,
-                    endLine: 2,
-                    endColumn: 40,
-                },
-            ],
-        },
+                errors: [
+                    {
+                        type: TSESTree.AST_NODE_TYPES.TSTypeParameterInstantiation,
+                        messageId: "invalidQueryType",
+                        line: 2,
+                        column: 32,
+                        endLine: 2,
+                        endColumn: 40,
+                    },
+                ],
+            },
+        ],
+    },
+);
 
-        // Test parse error in GraphQL template literal string:
+ruleTester.run("Parse error in GraphQL template literal string", rules["check-query-types"], {
+    valid: [],
+    invalid: [
         {
             options: ruleOptions,
             code: "CaregiverGraphQL.query(conn, gql`not a graphql document`, {});",
@@ -160,8 +174,12 @@ await AgencyMemberGraphQL.query<
                 },
             ],
         },
+    ],
+});
 
-        // Test validation error in GraphQL template literal string:
+ruleTester.run("Validation error in GraphQL template literal string", rules["check-query-types"], {
+    valid: [],
+    invalid: [
         {
             options: ruleOptions,
             code: "CaregiverGraphQL.query(conn, gql`query {nonexistent_field}`, {});",
@@ -170,11 +188,13 @@ await AgencyMemberGraphQL.query<
                     type: TSESTree.AST_NODE_TYPES.MemberExpression,
                     messageId: "invalidGqlLiteral",
                     data: {
-                        errorMessage: "- Unknown field 'nonexistent_field' on type 'Query'.\n" +
-'  \n' + // Explicit string to avoid auto-removal of indentation on empty line.
-`  GraphQL request:1:8
+                        errorMessage:
+                            "- Unknown field 'nonexistent_field' on type 'Query'.\n" +
+                            "  \n" + // Explicit string to avoid auto-removal of indentation on empty line.
+                            `  GraphQL request:1:8
   1 | query {nonexistent_field}
-    |        ^` },
+    |        ^`,
+                    },
 
                     line: 1,
                     column: 1,
