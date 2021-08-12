@@ -29,7 +29,7 @@ export const test = async () =>
     AgencyMemberGraphQL.query<
         { memberName: string; id: AgencyMemberId_Filter | null },
         {
-            agencyMembers: ReadonlyArray<{
+            agencyMembors: ReadonlyArray<{
                 id: AgencyMemberId;
                 firstName: string;
                 agency: { website: string };

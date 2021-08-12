@@ -1,4 +1,5 @@
 import { ESLintUtils, TSESTree } from "@typescript-eslint/experimental-utils";
+import * as path from "path";
 
 import { RuleOptions, rules } from "./rules";
 
@@ -6,14 +7,116 @@ const ruleTester = new ESLintUtils.RuleTester({
     parser: "@typescript-eslint/parser",
 });
 
+const invalidSchemaPath = "src/test/test_invalid_schema.txt";
 const ruleOptions: RuleOptions = [
     {
         schemaFilePaths: {
-            CaregiverGraphQL: "src/test/test_schema_caregiver.graphql",
             AgencyMemberGraphQL: "src/test/test_schema_agency_member.graphql",
+            CaregiverGraphQL: "src/test/test_schema_caregiver.graphql",
+            NonexistentSchemaGraphQL: "this/schema/file/does/not/exist.graphql",
+            InvalidSchemaGraphQL: invalidSchemaPath,
         },
     },
 ];
+
+ruleTester.run("Nonexistent schema file", rules["check-query-types"], {
+    valid: [],
+    invalid: [
+        {
+            options: ruleOptions,
+            code: "NonexistentSchemaGraphQL.query(conn, gql``, {});",
+            errors: [
+                {
+                    type: TSESTree.AST_NODE_TYPES.MemberExpression,
+                    messageId: "unreadableSchemaFile",
+                    // We don't test data as data.errorMessage may be platform specific.
+                    line: 1,
+                    column: 1,
+                    endLine: 1,
+                    endColumn: 31,
+                },
+            ],
+        },
+    ],
+});
+
+ruleTester.run("Invalid schema file", rules["check-query-types"], {
+    valid: [],
+    invalid: [
+        {
+            options: ruleOptions,
+            code: "InvalidSchemaGraphQL.query(conn, gql``, {});",
+            errors: [
+                {
+                    type: TSESTree.AST_NODE_TYPES.MemberExpression,
+                    messageId: "invalidGqlSchema",
+                    data: {
+                        schemaFilePath: path.resolve(invalidSchemaPath),
+                        errorMessage: `Syntax Error: Unexpected Name "a".
+
+GraphQL request:1:10
+1 | type not a valid schema
+  |          ^
+2 |`,
+                    },
+                    line: 1,
+                    column: 1,
+                    endLine: 1,
+                    endColumn: 27,
+                },
+            ],
+        },
+    ],
+});
+
+ruleTester.run("Parse error in GraphQL template literal string", rules["check-query-types"], {
+    valid: [],
+    invalid: [
+        {
+            options: ruleOptions,
+            code: "CaregiverGraphQL.query(conn, gql`not a graphql document`, {});",
+            errors: [
+                {
+                    type: TSESTree.AST_NODE_TYPES.MemberExpression,
+                    messageId: "gqlLiteralParseError",
+                    data: { errorMessage: 'Syntax Error: Unexpected Name "not".' },
+                    line: 1,
+                    column: 1,
+                    endLine: 1,
+                    endColumn: 23,
+                },
+            ],
+        },
+    ],
+});
+
+ruleTester.run("Validation error in GraphQL template literal string", rules["check-query-types"], {
+    valid: [],
+    invalid: [
+        {
+            options: ruleOptions,
+            code: "CaregiverGraphQL.query(conn, gql`query {nonexistent_field}`, {});",
+            errors: [
+                {
+                    type: TSESTree.AST_NODE_TYPES.MemberExpression,
+                    messageId: "invalidGqlLiteral",
+                    data: {
+                        errorMessage: `Cannot query field "nonexistent_field" on type "Query".
+
+GraphQL request:1:8
+1 | query {nonexistent_field}
+  |        ^`,
+                    },
+
+                    line: 1,
+                    column: 1,
+                    endLine: 1,
+                    endColumn: 23,
+                },
+            ],
+        },
+    ],
+});
 
 ruleTester.run(
     "Invalid query-type annotation with AgencyMemberGraphQL schema",
@@ -151,52 +254,3 @@ await CaregiverGraphQL.query<
         ],
     },
 );
-
-ruleTester.run("Parse error in GraphQL template literal string", rules["check-query-types"], {
-    valid: [],
-    invalid: [
-        {
-            options: ruleOptions,
-            code: "CaregiverGraphQL.query(conn, gql`not a graphql document`, {});",
-            errors: [
-                {
-                    type: TSESTree.AST_NODE_TYPES.MemberExpression,
-                    messageId: "gqlLiteralParseError",
-                    data: { errorMessage: 'Syntax Error: Unexpected Name "not".' },
-                    line: 1,
-                    column: 1,
-                    endLine: 1,
-                    endColumn: 23,
-                },
-            ],
-        },
-    ],
-});
-
-ruleTester.run("Validation error in GraphQL template literal string", rules["check-query-types"], {
-    valid: [],
-    invalid: [
-        {
-            options: ruleOptions,
-            code: "CaregiverGraphQL.query(conn, gql`query {nonexistent_field}`, {});",
-            errors: [
-                {
-                    type: TSESTree.AST_NODE_TYPES.MemberExpression,
-                    messageId: "invalidGqlLiteral",
-                    data: {
-                        errorMessage: `Cannot query field "nonexistent_field" on type "Query".
-
-GraphQL request:1:8
-1 | query {nonexistent_field}
-  |        ^`,
-                    },
-
-                    line: 1,
-                    column: 1,
-                    endLine: 1,
-                    endColumn: 23,
-                },
-            ],
-        },
-    ],
-});
