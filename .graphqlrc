@@ -1,15 +1,9 @@
 # For VSCode graphql plugin
-#
-
-# schema: '/src/test/test_schema_agency_member.graphql'
 
 projects:
   agencyMemberTestProject:
-    schema: src/test/test_schema_agency_member.graphql
-    documents: src/test/queries/agencyMember/**/*.{graphql,tsx,jsx,ts,js}
-    #extensions:
-    #  languageService:
-    #    useSchemaFileDefinitions: true
+    schema: src/schemas/test_schema_agency_member.graphql
+    documents: src/demo/queries/agencyMember/**/*.{graphql,tsx,jsx,ts,js}
   caregiverTestProject:
-    schema: src/test/test_schema_caregiver.graphql
-    documents: src/test/queries/caregiver/**/*.{graphql,tsx,jsx,ts,js}
+    schema: src/schemas/test_schema_caregiver.graphql
+    documents: src/demo/queries/caregiver/**/*.{graphql,tsx,jsx,ts,js}

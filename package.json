@@ -20,12 +20,14 @@
     "build": "tsc -p ./tsconfig.json",
     "build-watch": "npm run build -- --watch",
     "clean": "rm -rf dist",
-    "lint-test-queries": "eslint --ext .ts src/test/queries",
-    "lint-watch-test-queries": "nodemon --watch dist --watch src/test/queries --exec 'npm run lint-test-queries'",
+    "install-demo": "cd src/demo && npm install",
+    "lint-demo-queries": "eslint --ext .ts src/demo/queries",
+    "lint-watch-demo-queries": "nodemon --watch dist --watch src/demo/queries --exec 'npm run lint-demo-queries'",
     "prepublishOnly": "npm run clean && npm run build && npm test",
     "prettier-check": "prettier -l '**/*.{ts,tsx,js,scss}'",
     "prettier-fix": "npm run prettier-check -- --write",
-    "test": "jest"
+    "test": "jest",
+    "test-watch": "npm test -- --watch"
   },
   "dependencies": {
     "@typescript-eslint/experimental-utils": "^4.29.0",

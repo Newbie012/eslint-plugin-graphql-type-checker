@@ -7,13 +7,13 @@ const ruleTester = new ESLintUtils.RuleTester({
     parser: "@typescript-eslint/parser",
 });
 
-const invalidSchemaPath = "src/test/test_invalid_schema.txt";
+const invalidSchemaPath = "src/schemas/invalid-schema.txt";
 const ruleOptions: RuleOptions = [
     {
         schemaFilePaths: {
-            AgencyMemberGraphQL: "src/test/test_schema_agency_member.graphql",
-            CaregiverGraphQL: "src/test/test_schema_caregiver.graphql",
-            NonexistentSchemaGraphQL: "this/schema/file/does/not/exist.graphql",
+            AgencyMemberGraphQL: "src/schemas/agency-member-schema.graphql",
+            CaregiverGraphQL: "src/schemas/caregiver-schema.graphql",
+            NonexistentSchemaGraphQL: "this/schemas/file/does/not/exist.graphql",
             InvalidSchemaGraphQL: invalidSchemaPath,
         },
     },

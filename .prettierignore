@@ -4,3 +4,4 @@
 bash-scripts/
 dist/
 package-lock.json
+src/demo/package-lock.json

@@ -12,8 +12,10 @@ module.exports = {
                     // Ideally, we'd resolve against the location of this file, eslint does not seem to support this.
                     // And we cannot move this file to the root, since it needs to be in the directory with the
                     // package.json containing the "file:../.." dependency, and we cannot have that in the root package.
-                    CaregiverGraphQL: "src/test/test_schema_caregiver.graphql",
-                    AgencyMemberGraphQL: "src/test/test_schema_agency_member.graphql",
+                    AgencyMemberGraphQL: "src/schemas/agency-member-schema.graphql",
+                    CaregiverGraphQL: "src/schemas/caregiver-schema.graphql",
+                    NonexistentSchemaGraphQL: "this/schemas/file/does/not/exist.graphql",
+                    InvalidSchemaGraphQL: "src/schemas/invalid-schema.txt",
                 },
             },
         ],
