@@ -10,6 +10,8 @@ export const catchExceptions =
         }
     };
 
-export const isError = <V, E>(result: ValueOrError<V, E>): result is {error: E} => 'error' in result
+export const isError = <V, E>(result: ValueOrError<V, E>): result is { error: E } =>
+    "error" in result;
 
-export const isValue = <V, E>(result: ValueOrError<V, E>): result is {value: V} => 'value' in result
+export const isValue = <V, E>(result: ValueOrError<V, E>): result is { value: V } =>
+    "value" in result;

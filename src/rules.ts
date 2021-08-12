@@ -156,21 +156,24 @@ const checkQueryTypes_Rule = (
                         messageId,
                         node,
                         inferredAnnotationRange,
-                    }: { messageId: MessageId; node: TSESTree.Node; inferredAnnotationRange: [number, number] } =
-                        typeAnnotation
-                            ? {
-                                  messageId: "invalidQueryType",
-                                  node: typeAnnotation,
-                                  inferredAnnotationRange: typeAnnotation.range,
-                              }
-                            : {
-                                  messageId: "missingQueryType",
-                                  node: callExpression.callee,
-                                  inferredAnnotationRange: [
-                                      callExpression.callee.range[1],
-                                      callExpression.callee.range[1],
-                                  ],
-                              };
+                    }: {
+                        messageId: MessageId;
+                        node: TSESTree.Node;
+                        inferredAnnotationRange: [number, number];
+                    } = typeAnnotation
+                        ? {
+                              messageId: "invalidQueryType",
+                              node: typeAnnotation,
+                              inferredAnnotationRange: typeAnnotation.range,
+                          }
+                        : {
+                              messageId: "missingQueryType",
+                              node: callExpression.callee,
+                              inferredAnnotationRange: [
+                                  callExpression.callee.range[1],
+                                  callExpression.callee.range[1],
+                              ],
+                          };
                     // console.log("annotationRange", annotationRange);
 
                     const typeStr = prettifyAnnotationInPlace(
