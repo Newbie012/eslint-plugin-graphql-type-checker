@@ -5,6 +5,19 @@
   "main": "./dist/rules.js",
   "author": "MedFlyt",
   "license": "MIT",
+  "keywords": [
+    "eslint",
+    "plugin",
+    "gql",
+    "template",
+    "literal",
+    "graphql",
+    "typescript",
+    "validation",
+    "generated",
+    "types",
+    "typings"
+  ],
   "files": [
     "dist/**/*"
   ],
