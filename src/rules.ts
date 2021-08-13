@@ -368,15 +368,17 @@ const prettifyAnnotationInPlace = (
     return prettyAnnotationStr;
 };
 
-const createRule = ESLintUtils.RuleCreator(
-    (name) =>
-        `https://github.com/MedFlyt/medflyt_server2/blob/packages/eslint-plugin-graphql-type-checker/docs/rules/${name}.md`,
-);
+// Get the actual version directly from the package.json.
+const version: string = require("../package.json").version;
+
+// This is not a typical ESLint rules package, as we only have a single rule.
+const urlCreator = (_ruleName: string) =>
+    `https://github.com/MedFlyt/eslint-plugin-graphql-type-checker/blob/v${version}/README.md`;
 
 const checkQueryTypes_RuleName = "check-query-types";
 
 export const rules = {
-    [checkQueryTypes_RuleName]: createRule<RuleOptions, MessageId>({
+    [checkQueryTypes_RuleName]: ESLintUtils.RuleCreator(urlCreator)<RuleOptions, MessageId>({
         name: checkQueryTypes_RuleName,
         meta: {
             fixable: "code",
