@@ -73,6 +73,7 @@ const checkQueryTypes_RuleListener = (context: RuleContext): TSESLint.RuleListen
                             if (gqlStr !== null) {
                                 checkQueryTypes_Rule(
                                     context,
+                                    connIdentifierName,
                                     schemaFilePath,
                                     taggedGqlTemplate,
                                     gqlStr,
@@ -97,6 +98,7 @@ const checkQueryTypes_RuleListener = (context: RuleContext): TSESLint.RuleListen
 };
 const checkQueryTypes_Rule = (
     context: RuleContext,
+    graphQLObjectName: string,
     schemaFilePath: string,
     taggedGqlTemplate: TSESTree.TaggedTemplateExpression,
     gqlStr: string,
@@ -191,6 +193,7 @@ const checkQueryTypes_Rule = (
 
                             const typeStr = prettifyAnnotationInPlace(
                                 context,
+                                graphQLObjectName,
                                 calleeProperty,
                                 inferredAnnotationRange,
                                 inferredTypeAnnotationStr,
@@ -312,11 +315,19 @@ const compareTypeAnnotations = (
 // the right indentation when it is applied as a quick fix.
 const prettifyAnnotationInPlace = (
     context: RuleContext,
+    graphQLObjectName: string,
     calleeProperty: TSESTree.Identifier,
     annotationRange: [number, number],
     annotation: string,
 ) => {
-    const PLACEHOLDER = "Q____"; // Needs to have the same length as calleeProperty for optimal layout.
+    // To be able to extract the anotation, we replace the callee property (i.e. the operation method name) with use
+    // a same-length string consisting of '𐙀' characters from the unicode Linear A block. This will fail if the module
+    // already contains a method call on the graphQLObject consisting of the right amount of '𐙀' characters, but in that
+    // case the module author has bigger problems than a plugin exception.
+    //
+    // Needs to have the same length as calleeProperty for optimal layout.
+    const calleePropertyLength = calleeProperty.range[1] - calleeProperty.range[0];
+    const PLACEHOLDER = "𐙀".repeat(calleePropertyLength); //https://unicode-table.com/en/10640/
 
     // Replace the callee property in the module source with the placeholder:
     const placeholderModuleStr =
@@ -324,11 +335,13 @@ const prettifyAnnotationInPlace = (
         PLACEHOLDER +
         context.getSourceCode().text.slice(calleeProperty.range[1]);
 
-    // Insert inferred type annotation in the module source with the placeholder property name:
+    // Insert inferred type annotation in the module source with the placeholder property name, taking into account
+    // that the unicode PLACEHOLDER string length is 2 * calleePropertyLength. (Prettier treats it as having the same
+    // width as calleeProperty though.)
     const annotatedPlaceholderModuleStr =
-        placeholderModuleStr.slice(0, annotationRange[0]) +
+        placeholderModuleStr.slice(0, annotationRange[0] + calleePropertyLength) + // NOTE: PLACEHOLDER is twice as long
         annotation +
-        placeholderModuleStr.slice(annotationRange[1]);
+        placeholderModuleStr.slice(annotationRange[1] + calleePropertyLength); // NOTE: PLACEHOLDER is twice as long
 
     const prettierConfig = prettier.resolveConfig.sync(context.getFilename());
 
@@ -345,6 +358,8 @@ const prettifyAnnotationInPlace = (
         (node): node is TSESTree.CallExpression =>
             node.type === "CallExpression" &&
             node.callee.type === "MemberExpression" &&
+            node.callee.object.type === "Identifier" &&
+            node.callee.object.name === graphQLObjectName &&
             node.callee.property.type === "Identifier" &&
             node.callee.property.name === PLACEHOLDER,
     );
