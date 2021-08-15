@@ -12,6 +12,11 @@ module.exports = {
                     // Ideally, we'd resolve against the location of this file, but eslint does not seem to support
                     // this. We also cannot move this file to the root, since it needs to be in the directory with the
                     // package.json containing the "file:../.." dependency, and we cannot have that in the root package.
+                    Apollo: {
+                        schemaFilePath: "src/schemas/apollo-schema.graphql",
+                        operationMethodName: "useQuery",
+                        gqlLiteralArgumentIndex: 0,
+                    },
                     AgencyMemberGraphQL: {
                         schemaFilePath: "src/schemas/agency-member-schema.graphql",
                         operationMethodName: "query",

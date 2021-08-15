@@ -11,6 +11,11 @@ const invalidSchemaPath = "src/schemas/invalid-schema.txt";
 const ruleOptions: RuleOptions = [
     {
         gqlOperationObjects: {
+            Apollo: {
+                schemaFilePath: "src/schemas/apollo-schema.graphql",
+                operationMethodName: "useQuery",
+                gqlLiteralArgumentIndex: 0,
+            },
             AgencyMemberGraphQL: {
                 schemaFilePath: "src/schemas/agency-member-schema.graphql",
                 operationMethodName: "query",
@@ -90,7 +95,7 @@ ruleTester.run("Parse error in GraphQL template literal string", rules["check-qu
     invalid: [
         {
             options: ruleOptions,
-            code: "AgencyMemberGraphQL.query(conn, gql`not a graphql document`, {});",
+            code: "Apollo.useQuery(gql`not a graphql document`, {});",
             errors: [
                 {
                     type: TSESTree.AST_NODE_TYPES.MemberExpression,
@@ -99,7 +104,7 @@ ruleTester.run("Parse error in GraphQL template literal string", rules["check-qu
                     line: 1,
                     column: 1,
                     endLine: 1,
-                    endColumn: 26,
+                    endColumn: 16,
                 },
             ],
         },
@@ -111,7 +116,7 @@ ruleTester.run("Validation error in GraphQL template literal string", rules["che
     invalid: [
         {
             options: ruleOptions,
-            code: "AgencyMemberGraphQL.query(conn, gql`query {nonexistent_field}`, {});",
+            code: "Apollo.useQuery(gql`query {nonexistent_field}`, {});",
             errors: [
                 {
                     type: TSESTree.AST_NODE_TYPES.MemberExpression,
@@ -127,7 +132,50 @@ GraphQL request:1:8
                     line: 1,
                     column: 1,
                     endLine: 1,
-                    endColumn: 26,
+                    endColumn: 16,
+                },
+            ],
+        },
+    ],
+});
+
+ruleTester.run("Invalid query type annotation with Apollo schema", rules["check-query-types"], {
+    valid: [],
+    invalid: [
+        {
+            options: ruleOptions,
+            code: `
+Apollo.useQuery<{}, {}>(
+    gql\`
+        query GetGreeting($language: String!) {
+            greeting(language: $language) {
+                message
+            }
+        }
+    \`,
+    args,
+);
+`,
+            output: `
+Apollo.useQuery<{ greeting: { message: string } }, { language: string }>(
+    gql\`
+        query GetGreeting($language: String!) {
+            greeting(language: $language) {
+                message
+            }
+        }
+    \`,
+    args,
+);
+`,
+            errors: [
+                {
+                    type: TSESTree.AST_NODE_TYPES.TSTypeParameterInstantiation,
+                    messageId: "invalidQueryType",
+                    line: 2,
+                    column: 16,
+                    endLine: 2,
+                    endColumn: 24,
                 },
             ],
         },
@@ -135,73 +183,7 @@ GraphQL request:1:8
 });
 
 ruleTester.run(
-    "Invalid query-type annotation with AgencyMemberGraphQL schema",
-    rules["check-query-types"],
-    {
-        valid: [],
-        invalid: [
-            {
-                options: ruleOptions,
-                code: `
-await AgencyMemberGraphQL.query<{}, {}>(
-    conn,
-    gql\`
-        query ($memberName: String!, $id: AgencyMemberId_Filter) {
-            agencyMembers(nameSearch: $memberName, id: $id) {
-                id
-                firstName
-                agency {
-                    website
-                }
-            }
-        }
-    \`,
-    args,
-);
-`,
-                output: `
-await AgencyMemberGraphQL.query<
-    {
-        agencyMembers: ReadonlyArray<{
-            id: AgencyMemberId;
-            firstName: string;
-            agency: { website: string };
-        }>;
-    },
-    { memberName: string; id: AgencyMemberId_Filter | null }
->(
-    conn,
-    gql\`
-        query ($memberName: String!, $id: AgencyMemberId_Filter) {
-            agencyMembers(nameSearch: $memberName, id: $id) {
-                id
-                firstName
-                agency {
-                    website
-                }
-            }
-        }
-    \`,
-    args,
-);
-`,
-                errors: [
-                    {
-                        type: TSESTree.AST_NODE_TYPES.TSTypeParameterInstantiation,
-                        messageId: "invalidQueryType",
-                        line: 2,
-                        column: 32,
-                        endLine: 2,
-                        endColumn: 40,
-                    },
-                ],
-            },
-        ],
-    },
-);
-
-ruleTester.run(
-    "Missing query-type annotation with CaregiverGraphQL schema",
+    "Missing query type annotation with CaregiverGraphQL schema",
     rules["check-query-types"],
     {
         valid: [],

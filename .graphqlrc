@@ -1,6 +1,9 @@
 # For VSCode graphql plugin
 
 projects:
+  apolloTestProject:
+    schema: src/schemas/apollo-schema.graphql
+    documents: src/demo/queries/apollo/**/*.{graphql,tsx,jsx,ts,js}
   agencyMemberTestProject:
     schema: src/schemas/agency-member-schema.graphql
     documents: src/demo/queries/agencyMember/**/*.{graphql,tsx,jsx,ts,js}

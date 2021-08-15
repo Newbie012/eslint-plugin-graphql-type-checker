@@ -1,0 +1,8 @@
+type Query {
+  greeting(language: String!): Greeting!
+}
+
+type Greeting {
+  greeting_id: ID!
+  message: String!
+}
