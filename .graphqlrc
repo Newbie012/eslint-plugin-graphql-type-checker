@@ -2,8 +2,8 @@
 
 projects:
   agencyMemberTestProject:
-    schema: src/schemas/test_schema_agency_member.graphql
+    schema: src/schemas/agency-member-schema.graphql
     documents: src/demo/queries/agencyMember/**/*.{graphql,tsx,jsx,ts,js}
   caregiverTestProject:
-    schema: src/schemas/test_schema_caregiver.graphql
+    schema: src/schemas/caregiver-schema.graphql
     documents: src/demo/queries/caregiver/**/*.{graphql,tsx,jsx,ts,js}
