@@ -9,6 +9,8 @@ import * as codeGenerator from "./codeGenerator";
 import * as eslintUtils from "./eslintUtils";
 import * as utils from "./utils";
 
+import type { JSONSchema4 } from "json-schema";
+
 const messages = {
     noInterpolation: "Interpolation not allowed in gql template literals",
     gqlLiteralParseError: "Parse error in GraphQL template literal:\n\n{{errorMessage}}",
@@ -26,23 +28,46 @@ const messages = {
 };
 type MessageId = keyof typeof messages;
 
-export type RuleOptions = [{ schemaFilePaths: Record<string, string> }];
-
 type RuleContext = TSESLint.RuleContext<MessageId, RuleOptions>;
 
 type RuleReporter = (report: TSESLint.ReportDescriptor<MessageId>) => void;
 
-const checkQueryTypesRuleSchema = [
-    {
+const checkQueryTypesRuleSchema: JSONSchema4 = {
+    type: "array",
+    minItems: 1,
+    maxItems: 1,
+    items: {
         type: "object",
+        required: ["gqlOperationObjects"],
         properties: {
-            schemaFilePaths: {
+            gqlOperationObjects: {
                 type: "object",
-                additionalProperties: { type: "string" },
+                additionalProperties: {
+                    type: "object",
+                    required: ["schemaFilePath", "operationMethodName", "gqlLiteralArgumentIndex"],
+                    properties: {
+                        schemaFilePath: { type: "string" },
+                        operationMethodName: { type: "string" },
+                        gqlLiteralArgumentIndex: { type: "number", minimum: 0 },
+                    },
+                    additionalProperties: false,
+                },
             },
         },
-        required: ["schemaFilePaths"],
         additionalProperties: false,
+    },
+};
+
+export type RuleOptions = [
+    {
+        gqlOperationObjects: Record<
+            string, // gqlOperationObject name
+            {
+                schemaFilePath: string;
+                operationMethodName: string;
+                gqlLiteralArgumentIndex: number;
+            }
+        >;
     },
 ];
 
@@ -51,34 +76,45 @@ const checkQueryTypes_RuleListener = (context: RuleContext): TSESLint.RuleListen
         // Easy AST viewing: https://ts-ast-viewer.com/
         CallExpression(callExpression) {
             try {
-                const schemaFilePaths = context.options[0].schemaFilePaths;
-                const schemaNames = Object.keys(schemaFilePaths);
+                const gqlOperationObjects = context.options[0].gqlOperationObjects;
+                const schemaNames = Object.keys(gqlOperationObjects);
 
                 const { callee, arguments: args } = callExpression;
                 if (
                     callee.type === "MemberExpression" &&
-                    callee.property.type === "Identifier" &&
-                    callee.property.name === "query" &&
-                    callee.object.type === "Identifier"
+                    callee.object.type === "Identifier" &&
+                    schemaNames.includes(callee.object.name) &&
+                    callee.property.type === "Identifier"
                 ) {
-                    const connIdentifierName = callee.object.name;
-                    if (schemaNames.includes(connIdentifierName)) {
+                    const gqlOperationObjectName = callee.object.name;
+                    const { schemaFilePath, operationMethodName, gqlLiteralArgumentIndex } =
+                        gqlOperationObjects[gqlOperationObjectName];
+
+                    if (callee.property.name === operationMethodName) {
                         const typeAnnotation = callExpression.typeParameters;
 
-                        const taggedGqlTemplate = eslintUtils.getTaggedGqlTemplateArg(args);
-                        if (taggedGqlTemplate !== null) {
-                            const schemaFilePath = schemaFilePaths[connIdentifierName];
+                        const templateArg = args[gqlLiteralArgumentIndex];
 
-                            const gqlStr = getQglString(context.report, taggedGqlTemplate);
+                        // Don't error if the template argument does not exist, as the method might be called with a
+                        // variable instead, or have an overload with fewer parameters, so just don't trigger the rule.
+                        const taggedGqlTemplate =
+                            templateArg?.type === "TaggedTemplateExpression" &&
+                            templateArg?.tag?.type === "Identifier" &&
+                            templateArg?.tag?.name === "gql"
+                                ? templateArg
+                                : null;
+
+                        if (taggedGqlTemplate !== null) {
+                            const gqlStr = getGqlString(context.report, taggedGqlTemplate);
                             if (gqlStr !== null) {
                                 checkQueryTypes_Rule(
                                     context,
-                                    connIdentifierName,
+                                    gqlOperationObjectName,
                                     schemaFilePath,
                                     taggedGqlTemplate,
                                     gqlStr,
                                     callExpression,
-                                    callee.property, // i.e. the `query` property
+                                    callee.property, // i.e. the `operationMethodName` property
                                     typeAnnotation,
                                 );
                             }
@@ -98,7 +134,7 @@ const checkQueryTypes_RuleListener = (context: RuleContext): TSESLint.RuleListen
 };
 const checkQueryTypes_Rule = (
     context: RuleContext,
-    graphQLObjectName: string,
+    gqlOperationObjectName: string,
     schemaFilePath: string,
     taggedGqlTemplate: TSESTree.TaggedTemplateExpression,
     gqlStr: string,
@@ -193,7 +229,7 @@ const checkQueryTypes_Rule = (
 
                             const typeStr = prettifyAnnotationInPlace(
                                 context,
-                                graphQLObjectName,
+                                gqlOperationObjectName,
                                 calleeProperty,
                                 inferredAnnotationRange,
                                 inferredTypeAnnotationStr,
@@ -214,7 +250,7 @@ const checkQueryTypes_Rule = (
     }
 };
 
-function getQglString(report: RuleReporter, expr: TSESTree.TaggedTemplateExpression) {
+function getGqlString(report: RuleReporter, expr: TSESTree.TaggedTemplateExpression) {
     if (expr.quasi.expressions.length) {
         report({
             node: expr.quasi.expressions[0],
@@ -315,14 +351,14 @@ const compareTypeAnnotations = (
 // the right indentation when it is applied as a quick fix.
 const prettifyAnnotationInPlace = (
     context: RuleContext,
-    graphQLObjectName: string,
+    gqlOperationObjectName: string,
     calleeProperty: TSESTree.Identifier,
     annotationRange: [number, number],
     annotation: string,
 ) => {
     // To be able to extract the anotation, we replace the callee property (i.e. the operation method name) with use
     // a same-length string consisting of '𐙀' characters from the unicode Linear A block. This will fail if the module
-    // already contains a method call on the graphQLObject consisting of the right amount of '𐙀' characters, but in that
+    // already contains a method call on the gqlOperationObject consisting of the right amount of '𐙀' characters, but in that
     // case the module author has bigger problems than a plugin exception.
     //
     // Needs to have the same length as calleeProperty for optimal layout.
@@ -359,7 +395,7 @@ const prettifyAnnotationInPlace = (
             node.type === "CallExpression" &&
             node.callee.type === "MemberExpression" &&
             node.callee.object.type === "Identifier" &&
-            node.callee.object.name === graphQLObjectName &&
+            node.callee.object.name === gqlOperationObjectName &&
             node.callee.property.type === "Identifier" &&
             node.callee.property.name === PLACEHOLDER,
     );
@@ -408,7 +444,7 @@ export const rules = {
             type: "problem",
             schema: checkQueryTypesRuleSchema,
         },
-        defaultOptions: [{ schemaFilePaths: {} }],
+        defaultOptions: [{ gqlOperationObjects: {} }],
         create: checkQueryTypes_RuleListener,
     }),
 };

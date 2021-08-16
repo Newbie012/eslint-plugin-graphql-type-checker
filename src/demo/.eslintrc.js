@@ -7,15 +7,31 @@ module.exports = {
         "@medflyt/graphql-type-checker/check-query-types": [
             "error",
             {
-                schemaFilePaths: {
-                    // Note that these are relative to the project root, because eslint runs from the root.
-                    // Ideally, we'd resolve against the location of this file, eslint does not seem to support this.
-                    // And we cannot move this file to the root, since it needs to be in the directory with the
+                gqlOperationObjects: {
+                    // Note that the paths are relative to the project root, because eslint runs from the root.
+                    // Ideally, we'd resolve against the location of this file, but eslint does not seem to support
+                    // this. We also cannot move this file to the root, since it needs to be in the directory with the
                     // package.json containing the "file:../.." dependency, and we cannot have that in the root package.
-                    AgencyMemberGraphQL: "src/schemas/agency-member-schema.graphql",
-                    CaregiverGraphQL: "src/schemas/caregiver-schema.graphql",
-                    NonexistentSchemaGraphQL: "this/schemas/file/does/not/exist.graphql",
-                    InvalidSchemaGraphQL: "src/schemas/invalid-schema.txt",
+                    AgencyMemberGraphQL: {
+                        schemaFilePath: "src/schemas/agency-member-schema.graphql",
+                        operationMethodName: "query",
+                        gqlLiteralArgumentIndex: 1,
+                    },
+                    CaregiverGraphQL: {
+                        schemaFilePath: "src/schemas/caregiver-schema.graphql",
+                        operationMethodName: "query",
+                        gqlLiteralArgumentIndex: 1,
+                    },
+                    NonexistentSchemaGraphQL: {
+                        schemaFilePath: "this/schemas/file/does/not/exist.graphql",
+                        operationMethodName: "query",
+                        gqlLiteralArgumentIndex: 0,
+                    },
+                    InvalidSchemaGraphQL: {
+                        schemaFilePath: "src/schemas/invalid-schema.txt",
+                        operationMethodName: "query",
+                        gqlLiteralArgumentIndex: 0,
+                    },
                 },
             },
         ],

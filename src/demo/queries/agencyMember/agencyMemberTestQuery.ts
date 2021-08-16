@@ -9,7 +9,7 @@ type AgencyMemberId_Filter = {
 };
 
 const AgencyMemberGraphQL = {
-    query<Res, Args>(_conn: any, _gqlDoc: graphql.DocumentNode, _args: Args): Res {
+    query<Res, Args>(_conf: any, _gqlQuery: graphql.DocumentNode, _args: Args): Promise<Res> {
         return {} as any;
     },
 };

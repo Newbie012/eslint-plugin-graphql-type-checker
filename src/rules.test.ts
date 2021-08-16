@@ -10,11 +10,27 @@ const ruleTester = new ESLintUtils.RuleTester({
 const invalidSchemaPath = "src/schemas/invalid-schema.txt";
 const ruleOptions: RuleOptions = [
     {
-        schemaFilePaths: {
-            AgencyMemberGraphQL: "src/schemas/agency-member-schema.graphql",
-            CaregiverGraphQL: "src/schemas/caregiver-schema.graphql",
-            NonexistentSchemaGraphQL: "this/schemas/file/does/not/exist.graphql",
-            InvalidSchemaGraphQL: invalidSchemaPath,
+        gqlOperationObjects: {
+            AgencyMemberGraphQL: {
+                schemaFilePath: "src/schemas/agency-member-schema.graphql",
+                operationMethodName: "query",
+                gqlLiteralArgumentIndex: 1,
+            },
+            CaregiverGraphQL: {
+                schemaFilePath: "src/schemas/caregiver-schema.graphql",
+                operationMethodName: "query",
+                gqlLiteralArgumentIndex: 1,
+            },
+            NonexistentSchemaGraphQL: {
+                schemaFilePath: "this/schemas/file/does/not/exist.graphql",
+                operationMethodName: "query",
+                gqlLiteralArgumentIndex: 0,
+            },
+            InvalidSchemaGraphQL: {
+                schemaFilePath: invalidSchemaPath,
+                operationMethodName: "query",
+                gqlLiteralArgumentIndex: 0,
+            },
         },
     },
 ];
@@ -24,7 +40,7 @@ ruleTester.run("Nonexistent schema file", rules["check-query-types"], {
     invalid: [
         {
             options: ruleOptions,
-            code: "NonexistentSchemaGraphQL.query(conn, gql``, {});",
+            code: "NonexistentSchemaGraphQL.query(gql``);",
             errors: [
                 {
                     type: TSESTree.AST_NODE_TYPES.MemberExpression,
@@ -45,7 +61,7 @@ ruleTester.run("Invalid schema file", rules["check-query-types"], {
     invalid: [
         {
             options: ruleOptions,
-            code: "InvalidSchemaGraphQL.query(conn, gql``, {});",
+            code: "InvalidSchemaGraphQL.query(gql``);",
             errors: [
                 {
                     type: TSESTree.AST_NODE_TYPES.MemberExpression,
@@ -74,7 +90,7 @@ ruleTester.run("Parse error in GraphQL template literal string", rules["check-qu
     invalid: [
         {
             options: ruleOptions,
-            code: "CaregiverGraphQL.query(conn, gql`not a graphql document`, {});",
+            code: "AgencyMemberGraphQL.query(conn, gql`not a graphql document`, {});",
             errors: [
                 {
                     type: TSESTree.AST_NODE_TYPES.MemberExpression,
@@ -83,7 +99,7 @@ ruleTester.run("Parse error in GraphQL template literal string", rules["check-qu
                     line: 1,
                     column: 1,
                     endLine: 1,
-                    endColumn: 23,
+                    endColumn: 26,
                 },
             ],
         },
@@ -95,7 +111,7 @@ ruleTester.run("Validation error in GraphQL template literal string", rules["che
     invalid: [
         {
             options: ruleOptions,
-            code: "CaregiverGraphQL.query(conn, gql`query {nonexistent_field}`, {});",
+            code: "AgencyMemberGraphQL.query(conn, gql`query {nonexistent_field}`, {});",
             errors: [
                 {
                     type: TSESTree.AST_NODE_TYPES.MemberExpression,
@@ -111,7 +127,7 @@ GraphQL request:1:8
                     line: 1,
                     column: 1,
                     endLine: 1,
-                    endColumn: 23,
+                    endColumn: 26,
                 },
             ],
         },

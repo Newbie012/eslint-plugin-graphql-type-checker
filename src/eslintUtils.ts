@@ -33,17 +33,6 @@ export function* getNodes(
     }
 }
 
-export const getTaggedGqlTemplateArg = (
-    args: TSESTree.CallExpressionArgument[],
-): TSESTree.TaggedTemplateExpression | null => {
-    const templateArg = args[1];
-    return templateArg.type === "TaggedTemplateExpression" &&
-        templateArg.tag.type === "Identifier" &&
-        templateArg.tag.name === "gql"
-        ? templateArg
-        : null;
-};
-
 export const getTypeDeclaration = (
     programAst: TSESTree.Program,
     queryName: string,
