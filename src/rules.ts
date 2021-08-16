@@ -277,7 +277,16 @@ const validateGraphQLDoc = (
     codeGenValidationSquigglyNode: TSESTree.Node,
     gqlOperationDocument: graphql.DocumentNode,
 ): { node: TSESTree.Node; messageId: MessageId; data?: Record<string, string> } | null => {
-    const validationErrors = graphql.validate(schema, gqlOperationDocument);
+    // For some reason, graphql.validate may also throw a graphql.GraphQLError exception, rather than return it.
+    // (Happens when encountering a union that includes a scalar type.)
+    const exceptionOrValidationErrors = utils.catchExceptions(graphql.validate)(
+        schema,
+        gqlOperationDocument,
+    );
+    const validationErrors = utils.isError(exceptionOrValidationErrors)
+        ? [exceptionOrValidationErrors.error]
+        : exceptionOrValidationErrors.value;
+
     if (validationErrors.length > 0) {
         return {
             node: generalValidationSquigglyNode,
