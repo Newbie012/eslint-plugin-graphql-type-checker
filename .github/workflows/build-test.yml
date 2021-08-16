@@ -1,4 +1,4 @@
-name: Build and run tests
+name: Build and test
 
 on: [push]
 
@@ -16,7 +16,8 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-      - run: npm ci
+      - run: npm i
+      - run: npm run --silent install-demo
       - run: npm run --silent prettier-check
       - run: npm run --silent build
       - run: npm test
