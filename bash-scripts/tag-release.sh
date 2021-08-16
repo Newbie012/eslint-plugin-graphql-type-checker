@@ -33,9 +33,14 @@ then
   newVersion=$vMajorNew.$vMinorNew.$vPatchNew
   echo "Bumping version from ${vMajor}.${vMinor}.${vPatch} to ${newVersion}"
 
+  # Bump version in package.json:
   sed -i '' -e "s/\(\"version\": *\"\).*\(\".*\)$/\1${newVersion}\2/" package.json
+
+  # Npm install to bump versions in package-lock.json and src/demo/package-lock.json:
   npm i
-  git add package.json package-lock.json
+  npm run --silent install-demo
+
+  git add package.json package-lock.json src/demo/package-lock.json
   git commit -m "Release ${newVersion}"
   git tag -a "v${newVersion}" -m "Release ${newVersion}"
 else
