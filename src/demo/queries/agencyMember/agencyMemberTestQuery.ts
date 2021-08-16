@@ -9,7 +9,7 @@ type AgencyMemberId_Filter = {
 };
 
 const AgencyMemberGraphQL = {
-    query<Args, Res>(_conn: any, _gqlDoc: graphql.DocumentNode, _args: Args): Res {
+    query<Res, Args>(_conn: any, _gqlDoc: graphql.DocumentNode, _args: Args): Res {
         return {} as any;
     },
 };
@@ -18,14 +18,14 @@ const conn = undefined;
 
 export const test = async () =>
     AgencyMemberGraphQL.query<
-        { memberName: string; id: AgencyMemberId_Filter | null },
         {
             agencyMembers: ReadonlyArray<{
                 id: AgencyMemberId;
                 firstName: string;
                 agency: { website: string };
             }>;
-        }
+        },
+        { memberName: string; id: AgencyMemberId_Filter | null }
     >(
         conn,
         gql`

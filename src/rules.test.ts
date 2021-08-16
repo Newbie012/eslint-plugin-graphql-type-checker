@@ -145,14 +145,14 @@ await AgencyMemberGraphQL.query<{}, {}>(
 `,
                 output: `
 await AgencyMemberGraphQL.query<
-    { memberName: string; id: AgencyMemberId_Filter | null },
     {
         agencyMembers: ReadonlyArray<{
             id: AgencyMemberId;
             firstName: string;
             agency: { website: string };
         }>;
-    }
+    },
+    { memberName: string; id: AgencyMemberId_Filter | null }
 >(
     conn,
     gql\`
@@ -213,7 +213,6 @@ await CaregiverGraphQL.query(
 `,
                 output: `
 await CaregiverGraphQL.query<
-    { bundleId: TrainingCenterBundleId },
     {
         visibleTrainingCenterBundles: ReadonlyArray<{
             caregiver_id: CaregiverId;
@@ -221,7 +220,8 @@ await CaregiverGraphQL.query<
             caregiver_visible_date: LocalDate;
             agency: { name: string; website: string };
         }>;
-    }
+    },
+    { bundleId: TrainingCenterBundleId }
 >(
     conn,
     gql\`

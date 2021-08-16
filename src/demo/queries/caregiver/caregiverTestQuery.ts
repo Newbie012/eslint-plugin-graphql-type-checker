@@ -12,7 +12,7 @@ type Agency = {
 };
 
 const CaregiverGraphQL = {
-    query<Args, Res>(_conn: any, _gqlDoc: graphql.DocumentNode, _args: Args): Res {
+    query<Res, Args>(_conn: any, _gqlDoc: graphql.DocumentNode, _args: Args): Res {
         return {} as any;
     },
 };
@@ -21,7 +21,6 @@ const conn = undefined;
 
 export const test = async () =>
     CaregiverGraphQL.query<
-        { bundleId: TrainingCenterBundleId },
         {
             visibleTrainingCenterBundles: ReadonlyArray<{
                 caregiver_id: CaregiverId;
@@ -29,7 +28,8 @@ export const test = async () =>
                 caregiver_visible_date: LocalDate;
                 agency: { name: string; website: string };
             }>;
-        }
+        },
+        { bundleId: TrainingCenterBundleId }
     >(
         conn,
         gql`

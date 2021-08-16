@@ -152,7 +152,7 @@ const checkQueryTypes_Rule = (
                             schema,
                             gqlOperationDocument,
                         );
-                        const inferredTypeAnnotationStr = `<${argumentsType}, ${resultType}>`;
+                        const inferredTypeAnnotationStr = `<${resultType}, ${argumentsType}>`;
 
                         const currentTypeAnnotationStr = typeAnnotation
                             ? context
