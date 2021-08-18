@@ -2,6 +2,12 @@
 
 The [`eslint-plugin-graphql-type-checker`](https://www.npmjs.com/package/@medflyt/eslint-plugin-graphql-type-checker) package is an ESLint plugin that generates and validates TypeScript type annotations for GraphQL queries. It contains a single rule `@medflyt/graphql-type-checker/check-query-types`, which triggers on configured object method calls (e.g. `Apollo.useQuery(..)`) and inspects queries passed as GraphQL template literals (i.e. ``gql`query ..` ``). From the query and the schema associated with the object name, it infers an annotation for the result and argument types, which can be applied to the code as an ESLint fix.
 
+<img
+  alt="Plugin demo screencast"
+  src="https://raw.githubusercontent.com/MedFlyt/eslint-plugin-graphql-type-checker/master/demo-screencast.gif"
+  width="700"
+/>
+
 **NOTE:** The plugin is still a work in progress, and currently only supports query operations, without fragments, union types or interfaces.
 
 ## Example
