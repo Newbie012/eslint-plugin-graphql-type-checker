@@ -3,14 +3,14 @@ import * as Apollo from "@apollo/client";
 
 // Example from https://github.com/apollographql/apollo-client/blob/main/docs/source/api/react/hooks.mdx#usequery
 export function Hello() {
-    const {
-        loading,
-        error: _error,
-        data,
-    } = Apollo.useQuery<{ greeting: { message: string } }, { language: string }>(
+    const { loading, data } = Apollo.useQuery<
+        { greeting: { __typename: "Greeting"; message: string } },
+        { language: string }
+    >(
         gql`
             query GetGreeting($language: String!) {
                 greeting(language: $language) {
+                    __typename
                     message
                 }
             }

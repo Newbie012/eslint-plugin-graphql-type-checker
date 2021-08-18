@@ -94,28 +94,34 @@ const genResultType_Selection =
         switch (selection.kind) {
             case "Field": {
                 const fieldNode: graphql.FieldNode = selection;
-                const parentFieldMap: graphql.GraphQLFieldMap<any, any> = parentType.getFields();
-                const field = parentFieldMap[fieldNode.name.value];
-                const fieldType = field.type;
-                const namedType: graphql.GraphQLNamedType = graphql.getNamedType(fieldType);
-                const typeModifierWrapper = getTypeModifierWrapper(fieldType);
 
-                let tsBaseType: string;
-                if (fieldNode.selectionSet) {
-                    if (!(namedType instanceof graphql.GraphQLObjectType)) {
-                        throw new Error(
-                            "genResultType_Selection: Encountered selectionSet on non-object field.",
-                        );
-                    } else {
-                        tsBaseType = `{${fieldNode.selectionSet.selections
-                            .map(genResultType_Selection(schema, namedType))
-                            .join(", ")}}`;
-                    }
+                if (fieldNode.name.value === "__typename") {
+                    // TODO: not sure how this holds on union types and others.
+                    return `${fieldNode.name.value}: '${parentType.name}'`;
                 } else {
-                    tsBaseType = convertScalars(namedType.name);
-                }
+                    const parentFieldMap: graphql.GraphQLFieldMap<any, any> =
+                        parentType.getFields();
+                    const field = parentFieldMap[fieldNode.name.value];
+                    const fieldType = field.type;
+                    const namedType: graphql.GraphQLNamedType = graphql.getNamedType(fieldType);
+                    const typeModifierWrapper = getTypeModifierWrapper(fieldType);
 
-                return `${fieldNode.name.value}: ${typeModifierWrapper(tsBaseType)}`;
+                    let tsBaseType: string;
+                    if (fieldNode.selectionSet) {
+                        if (!(namedType instanceof graphql.GraphQLObjectType)) {
+                            throw new Error(
+                                "genResultType_Selection: Encountered selectionSet on non-object field.",
+                            );
+                        } else {
+                            tsBaseType = `{${fieldNode.selectionSet.selections
+                                .map(genResultType_Selection(schema, namedType))
+                                .join(", ")}}`;
+                        }
+                    } else {
+                        tsBaseType = convertScalars(namedType.name);
+                    }
+                    return `${fieldNode.name.value}: ${typeModifierWrapper(tsBaseType)}`;
+                }
             }
             case "FragmentSpread": {
                 throw new Error(

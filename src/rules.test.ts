@@ -149,6 +149,7 @@ Apollo.useQuery<{}, {}>(
     gql\`
         query GetGreeting($language: String!) {
             greeting(language: $language) {
+                __typename
                 message
             }
         }
@@ -157,10 +158,11 @@ Apollo.useQuery<{}, {}>(
 );
 `,
             output: `
-Apollo.useQuery<{ greeting: { message: string } }, { language: string }>(
+Apollo.useQuery<{ greeting: { __typename: "Greeting"; message: string } }, { language: string }>(
     gql\`
         query GetGreeting($language: String!) {
             greeting(language: $language) {
+                __typename
                 message
             }
         }
