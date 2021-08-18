@@ -81,23 +81,22 @@ const genResultType_OperationDefinition = (
     schema: graphql.GraphQLSchema,
     operationDef: graphql.OperationDefinitionNode,
 ): string => {
-    const fieldMap = graphql.getOperationRootType(schema, operationDef).getFields();
-
     const selectionSet = operationDef.selectionSet;
-    const fieldTsTypes = selectionSet.selections
-        .map(genResultType_Selection(schema, fieldMap))
+    const fieldPropertyListTypes = selectionSet.selections
+        .map(genResultType_Selection(schema, graphql.getOperationRootType(schema, operationDef)))
         .join(", ");
-    return `{ ${fieldTsTypes} }`; // TODO: name
+    return `{ ${fieldPropertyListTypes} }`;
 };
 
 const genResultType_Selection =
-    (schema: graphql.GraphQLSchema, parentFieldMap: graphql.GraphQLFieldMap<any, any>) =>
+    (schema: graphql.GraphQLSchema, parentType: graphql.GraphQLObjectType) =>
     (selection: graphql.SelectionNode): string => {
         switch (selection.kind) {
             case "Field": {
                 const fieldNode: graphql.FieldNode = selection;
+                const parentFieldMap: graphql.GraphQLFieldMap<any, any> = parentType.getFields();
                 const field = parentFieldMap[fieldNode.name.value];
-                const fieldType = field?.type;
+                const fieldType = field.type;
                 const namedType: graphql.GraphQLNamedType = graphql.getNamedType(fieldType);
                 const typeModifierWrapper = getTypeModifierWrapper(fieldType);
 
@@ -109,7 +108,7 @@ const genResultType_Selection =
                         );
                     } else {
                         tsBaseType = `{${fieldNode.selectionSet.selections
-                            .map(genResultType_Selection(schema, namedType.getFields()))
+                            .map(genResultType_Selection(schema, namedType))
                             .join(", ")}}`;
                     }
                 } else {
