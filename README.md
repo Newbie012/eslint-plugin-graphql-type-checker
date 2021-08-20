@@ -48,7 +48,7 @@ const result = GraphQLOperations.query(gql`
 
 If the plugin is configured for `GraphQLOperations.query` with the appropriate schema, the code above will trigger this lint error:
 
-```
+```text
 Query should have a type annotation that matches the GraphQL query type
 ```
 
@@ -121,8 +121,8 @@ module.exports = {
 };
 ```
 
-For more examples, see [`src/demo/.eslintrc.js`](https://github.com/MedFlyt/eslint-plugin-graphql-type-checker/blob/master/src/demo/.eslintrc.js)
-.
+For more examples, see [`src/demo/.eslintrc.js`](https://github.com/MedFlyt/eslint-plugin-graphql-type-checker/blob/master/src/demo/.eslintrc.js).
+
 # Demo
 
 To run the plugin directly from the sources, clone this repository, and run
