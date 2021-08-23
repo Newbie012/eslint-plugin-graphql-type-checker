@@ -10,3 +10,6 @@ projects:
   caregiverTestProject:
     schema: src/schemas/caregiver-schema.graphql
     documents: src/demo/queries/caregiver/**/*.{graphql,tsx,jsx,ts,js}
+  debugTestProject:
+    schema: src/schemas/debug-schema.graphql
+    documents: src/debugMain.ts

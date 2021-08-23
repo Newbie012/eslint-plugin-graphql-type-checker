@@ -1,0 +1,31 @@
+type Query {
+  visibleTrainingCenterBundles(
+    bundle_id: TrainingCenterBundleId_Filter
+  ): [VisibleTrainingCenterBundle!]!
+}
+
+scalar TrainingCenterBundleId
+
+type VisibleTrainingCenterBundle {
+  caregiver_id: CaregiverId!
+  agency_id: AgencyId!
+  caregiver_visible_date: LocalDate!
+  agency: Agency!
+}
+
+scalar CaregiverId
+
+scalar LocalDate
+
+type Agency {
+  id: AgencyId!
+  name: String!
+  website: String!
+}
+
+scalar AgencyId
+
+input TrainingCenterBundleId_Filter {
+  eq: TrainingCenterBundleId
+  in: [TrainingCenterBundleId!]
+}
