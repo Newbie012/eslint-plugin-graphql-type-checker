@@ -11,10 +11,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {
-    "@apollo/client": "^3.4.7"
-  },
   "devDependencies": {
     "@medflyt/eslint-plugin-graphql-type-checker": "file:../.."
+  },
+  "dependencies": {
+    "@apollo/client": "^3.4.8"
   }
 }
