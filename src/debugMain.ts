@@ -16,9 +16,10 @@ const gql = ([literal]: TemplateStringsArray): string => literal;
 const gqlStr = gql`
   query ($bundleId: TrainingCenterBundleId!) {
     visibleTrainingCenterBundles(bundle_id: $bundleId) {
-      caregiver_id
-      agency_id
-      caregiver_visible_date
+      # caregiver_id
+      # agency_id
+      # caregiver_visible_date
+      ...frag
       agency {
         # name # Common fields can be used only on interfaces, not on unions. Interfaces are a kind of union.
         # TODO: Using name on a union type is not caught by graphql.validate, as apparently FieldsOnCorrectTypeRule is not triggered.
@@ -37,6 +38,11 @@ const gqlStr = gql`
         }
       }
     }
+  }
+  fragment frag on VisibleTrainingCenterBundle {
+    caregiver_id
+    agency_id
+    caregiver_visible_date
   }
 `;
 

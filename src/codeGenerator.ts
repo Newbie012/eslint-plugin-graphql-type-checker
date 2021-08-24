@@ -79,12 +79,14 @@ const genArgumentsType_Type = (
 
 const genResultType_OperationDefinition = (
   schema: graphql.GraphQLSchema,
+  fragments: graphql.FragmentDefinitionNode[],
   operationDef: graphql.OperationDefinitionNode,
 ): string => {
   const selectionSet = operationDef.selectionSet;
   const operationRootType = graphql.getOperationRootType(schema, operationDef);
   return genResultType_Selections(
     schema,
+    fragments,
     operationRootType,
     operationRootType.getFields(),
     selectionSet,
@@ -118,12 +120,13 @@ const emitObjectType = (unionOfFields: UnionOfFields): string => {
 
 const genResultType_Selections = (
   schema: graphql.GraphQLSchema,
+  fragments: graphql.FragmentDefinitionNode[],
   parentType: graphql.GraphQLObjectType | graphql.GraphQLInterfaceType | graphql.GraphQLUnionType,
   fieldMap: graphql.GraphQLFieldMap<unknown, unknown>,
   selectionSet: graphql.SelectionSetNode,
 ): string => {
   const fieldPropertyListTypes = selectionSet.selections.flatMap(
-    genResultType_Selection(schema, parentType, fieldMap),
+    genResultType_Selection(schema, fragments, parentType, fieldMap),
   );
   //.join(", ");
   return emitObjectType(fieldPropertyListTypes);
@@ -134,6 +137,7 @@ const genResultType_Selections = (
 const genResultType_Selection =
   (
     schema: graphql.GraphQLSchema,
+    fragments: graphql.FragmentDefinitionNode[],
     parentType: graphql.GraphQLObjectType | graphql.GraphQLInterfaceType | graphql.GraphQLUnionType,
     parentFieldMap: graphql.GraphQLFieldMap<unknown, unknown>,
   ) =>
@@ -161,6 +165,7 @@ const genResultType_Selection =
             ) {
               tsBaseType = genResultType_Selections(
                 schema,
+                fragments,
                 namedType,
                 namedType.getFields(),
                 selectionSet,
@@ -169,6 +174,7 @@ const genResultType_Selection =
               const unionType: graphql.GraphQLUnionType = namedType;
               tsBaseType = genResultType_Selections(
                 schema,
+                fragments,
                 unionType,
                 parentFieldMap,
                 selectionSet,
@@ -195,7 +201,28 @@ const genResultType_Selection =
         }
       }
       case "FragmentSpread": {
-        throw new Error("genResultType_Selection: Unsupported SelectionNode: FragmentSpreadNode");
+        const fragmentSpread: graphql.FragmentSpreadNode = selection;
+        const fragmentDef = fragments.find(
+          (fragment) => fragment.name.value === fragmentSpread.name.value,
+        );
+        console.log(fragmentDef);
+        if (fragmentDef) {
+          const conditionType = typeFromAst(schema, fragmentDef.typeCondition);
+
+          if (!(conditionType instanceof graphql.GraphQLObjectType)) {
+            throw new Error(
+              `genResultType_Selection: Condition type on fragment '${fragmentDef.name.value}' is a non-object type.`,
+            );
+          } else {
+            return fragmentDef.selectionSet.selections.flatMap(
+              genResultType_Selection(schema, fragments, conditionType, conditionType.getFields()),
+            );
+          }
+        } else {
+          throw new Error(
+            `genResultType_Selection: Undefined fragment: ${fragmentSpread.name.value}`,
+          );
+        }
       }
       case "InlineFragment": {
         const inlineFragment: graphql.InlineFragmentNode = selection;
@@ -218,7 +245,14 @@ const genResultType_Selection =
 
         return graphql.isTypeSubTypeOf(schema, conditionType, parentType)
           ? inlineSelectionSet.selections
-              .flatMap(genResultType_Selection(schema, conditionType, conditionType.getFields()))
+              .flatMap(
+                genResultType_Selection(
+                  schema,
+                  fragments,
+                  conditionType,
+                  conditionType.getFields(),
+                ),
+              )
               .map(({ propertyFields, condition }) => ({
                 propertyFields,
                 condition: condition ?? conditionType,
@@ -234,9 +268,17 @@ export const generateTypes = (
   schema: graphql.GraphQLSchema,
   document: graphql.DocumentNode,
 ): { argumentsType: string; resultType: string } => {
-  if (document.definitions.length === 1 && document.definitions[0].kind === "OperationDefinition") {
+  if (
+    // document.definitions.length === 1 &&
+    document.definitions[0].kind === "OperationDefinition" &&
+    document.definitions[1].kind === "FragmentDefinition"
+  ) {
     const argumentsType = genArgumentsType_OperationDefinition(schema, document.definitions[0]);
-    const resultType = genResultType_OperationDefinition(schema, document.definitions[0]);
+    const resultType = genResultType_OperationDefinition(
+      schema,
+      [document.definitions[1]],
+      document.definitions[0],
+    );
 
     return { argumentsType, resultType };
   } else {
