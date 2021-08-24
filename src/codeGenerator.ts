@@ -82,53 +82,148 @@ const genResultType_OperationDefinition = (
   operationDef: graphql.OperationDefinitionNode,
 ): string => {
   const selectionSet = operationDef.selectionSet;
-  const fieldPropertyListTypes = selectionSet.selections
-    .map(genResultType_Selection(schema, graphql.getOperationRootType(schema, operationDef)))
-    .join(", ");
-  return `{ ${fieldPropertyListTypes} }`;
+  const operationRootType = graphql.getOperationRootType(schema, operationDef);
+  return genResultType_Selections(
+    schema,
+    operationRootType,
+    operationRootType.getFields(),
+    selectionSet,
+  );
 };
 
+type PropertyFields = ReadonlyArray<{ name: string; type: string }>;
+
+type UnionOfFields = ReadonlyArray<{
+  propertyFields: PropertyFields;
+  condition?: graphql.GraphQLNamedType;
+}>;
+
+const groupByType = (unionOfFields: UnionOfFields): ReadonlyArray<PropertyFields> => {
+  const groupedFields: Record<string, PropertyFields> = {};
+  for (const { propertyFields, condition } of unionOfFields) {
+    const typeName = condition?.name ?? ""; // a little weird, but '' is a valid object key (and not a type name)
+    groupedFields[typeName] = [...(groupedFields[typeName] ?? []), ...propertyFields];
+  }
+  return Object.values(groupedFields);
+};
+
+const emitObjectType = (unionOfFields: UnionOfFields): string => {
+  const fields = groupByType(unionOfFields);
+  return fields
+    .map(
+      (fieldList) => "{ " + fieldList.map(({ name, type }) => `${name}: ${type}`).join(", ") + " }",
+    )
+    .join(" | ");
+};
+
+const genResultType_Selections = (
+  schema: graphql.GraphQLSchema,
+  parentType: graphql.GraphQLObjectType | graphql.GraphQLInterfaceType | graphql.GraphQLUnionType,
+  fieldMap: graphql.GraphQLFieldMap<unknown, unknown>,
+  selectionSet: graphql.SelectionSetNode,
+): string => {
+  const fieldPropertyListTypes = selectionSet.selections.flatMap(
+    genResultType_Selection(schema, parentType, fieldMap),
+  );
+  //.join(", ");
+  return emitObjectType(fieldPropertyListTypes);
+};
+
+// Idea: return {props: [property list], condition?: Type}, and group by condition to create unions.
+// Probably need a wrap/close function to convert to union of objects.
 const genResultType_Selection =
-  (schema: graphql.GraphQLSchema, parentType: graphql.GraphQLObjectType) =>
-  (selection: graphql.SelectionNode): string => {
+  (
+    schema: graphql.GraphQLSchema,
+    parentType: graphql.GraphQLObjectType | graphql.GraphQLInterfaceType | graphql.GraphQLUnionType,
+    parentFieldMap: graphql.GraphQLFieldMap<unknown, unknown>,
+  ) =>
+  (selection: graphql.SelectionNode): UnionOfFields => {
     switch (selection.kind) {
       case "Field": {
         const fieldNode: graphql.FieldNode = selection;
 
         if (fieldNode.name.value === "__typename") {
-          // TODO: not sure how this holds on union types and others.
-          return `${fieldNode.name.value}: '${parentType.name}'`;
+          return [{ propertyFields: [{ name: fieldNode.name.value, type: parentType.name }] }];
         } else {
-          const parentFieldMap: graphql.GraphQLFieldMap<any, any> = parentType.getFields();
+          // const parentFieldMap: graphql.GraphQLFieldMap<any, any> =
+          //     parentType.getFields();
           const field = parentFieldMap[fieldNode.name.value];
           const fieldType = field.type;
           const namedType: graphql.GraphQLNamedType = graphql.getNamedType(fieldType);
           const typeModifierWrapper = getTypeModifierWrapper(fieldType);
 
           let tsBaseType: string;
-          if (fieldNode.selectionSet) {
-            if (!(namedType instanceof graphql.GraphQLObjectType)) {
+          const selectionSet = fieldNode.selectionSet;
+          if (selectionSet) {
+            if (
+              namedType instanceof graphql.GraphQLObjectType ||
+              namedType instanceof graphql.GraphQLInterfaceType
+            ) {
+              tsBaseType = genResultType_Selections(
+                schema,
+                namedType,
+                namedType.getFields(),
+                selectionSet,
+              );
+            } else if (namedType instanceof graphql.GraphQLUnionType) {
+              const unionType: graphql.GraphQLUnionType = namedType;
+              tsBaseType = genResultType_Selections(
+                schema,
+                unionType,
+                parentFieldMap,
+                selectionSet,
+              );
+            } else {
+              console.log(namedType);
               throw new Error(
                 "genResultType_Selection: Encountered selectionSet on non-object field.",
               );
-            } else {
-              tsBaseType = `{${fieldNode.selectionSet.selections
-                .map(genResultType_Selection(schema, namedType))
-                .join(", ")}}`;
             }
           } else {
             tsBaseType = convertScalars(namedType.name);
           }
-          return `${fieldNode.name.value}: ${typeModifierWrapper(tsBaseType)}`;
+          return [
+            {
+              propertyFields: [
+                {
+                  name: fieldNode.name.value,
+                  type: typeModifierWrapper(tsBaseType),
+                },
+              ],
+            },
+          ];
         }
       }
       case "FragmentSpread": {
         throw new Error("genResultType_Selection: Unsupported SelectionNode: FragmentSpreadNode");
       }
       case "InlineFragment": {
-        throw new Error(
-          "genResultType_SelectiongenResultType_Selection: Unsupported SelectionNode: InlineFragmentNode",
-        );
+        const inlineFragment: graphql.InlineFragmentNode = selection;
+        if (inlineFragment.typeCondition === undefined) {
+          // Is this valid
+          throw new Error("genResultType_Selection: Empty type condition");
+        }
+        const conditionType = typeFromAst(schema, inlineFragment.typeCondition);
+        if (conditionType === undefined) {
+          // Should not happen
+          throw new Error("genResultType_Selection: Undefined type condition");
+        }
+        if (!(conditionType instanceof graphql.GraphQLObjectType)) {
+          // TODO: What to do with list & non-null here?
+          throw new Error("genResultType_Selection: Condition type not an object type");
+        }
+        const inlineSelectionSet = inlineFragment.selectionSet;
+        // console.log(inlineSelectionSet.selections[0]);
+        console.log(inlineFragment);
+
+        return graphql.isTypeSubTypeOf(schema, conditionType, parentType)
+          ? inlineSelectionSet.selections
+              .flatMap(genResultType_Selection(schema, conditionType, conditionType.getFields()))
+              .map(({ propertyFields, condition }) => ({
+                propertyFields,
+                condition: condition ?? conditionType,
+              }))
+          : [];
       }
     }
   };
