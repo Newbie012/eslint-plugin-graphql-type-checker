@@ -3,16 +3,16 @@
 // @ts-check
 /** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {
-    globals: {
-        "ts-jest": {
-            isolatedModules: true,
-        },
+  globals: {
+    "ts-jest": {
+      isolatedModules: true,
     },
-    testEnvironment: "node",
-    transform: {
-        "^.+\\.tsx?$": "ts-jest",
-    },
-    testRegex: "./src/.+\\.test\\.ts$",
-    collectCoverage: false,
-    moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"],
+  },
+  testEnvironment: "node",
+  transform: {
+    "^.+\\.tsx?$": "ts-jest",
+  },
+  testRegex: "./src/.+\\.test\\.ts$",
+  collectCoverage: false,
+  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"],
 };
