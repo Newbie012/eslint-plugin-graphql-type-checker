@@ -12,9 +12,11 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@apollo/client": "^3.4.7"
+    "@apollo/client": "^3.4.7",
+    "react": "^17.0.2"
   },
   "devDependencies": {
-    "@medflyt/eslint-plugin-graphql-type-checker": "file:../.."
+    "@medflyt/eslint-plugin-graphql-type-checker": "file:../..",
+    "@types/react": "^17.0.19"
   }
 }

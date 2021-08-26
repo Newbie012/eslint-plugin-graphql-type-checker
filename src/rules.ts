@@ -300,9 +300,18 @@ const validateGraphQLDoc = (
   return null;
 };
 
-// helper to parse module as a TSESLint.SourceCode.Program, which requires extra properties.
-const parseSourceCodeProgram = (moduleStr: string): TSESLint.SourceCode.Program => {
+// Helper to parse module as a TSESLint.SourceCode.Program, which requires extra properties.
+const parseSourceCodeProgram = (
+  context: RuleContext,
+  moduleStr: string,
+): TSESLint.SourceCode.Program => {
+  // NOTE: Since ESLint parses the module source before triggering the rule, there should be a valid
+  // TSESLint.ParserOptions object somewhere, but unfortunately it is not present in `context`.
+  // As a workaround, we just determine `jsx` from the file extension.
+  const jsx = context.getFilename().toLowerCase().endsWith("tsx");
+
   const prettyModuleAst = parser.parse(moduleStr, {
+    ecmaFeatures: { jsx },
     loc: true,
     range: true,
     tokens: true,
@@ -385,7 +394,7 @@ const prettifyAnnotationInPlace = (
     prettierConfig ? prettierConfig : { parser: "typescript" },
   );
 
-  const sourceCodeProgram = parseSourceCodeProgram(prettyModuleStr);
+  const sourceCodeProgram = parseSourceCodeProgram(context, prettyModuleStr);
   const moduleSource = new TSESLint.SourceCode(prettyModuleStr, sourceCodeProgram);
 
   // Extract the callExpression of the placeholder property:
